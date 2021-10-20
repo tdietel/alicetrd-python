@@ -101,4 +101,4 @@ def read(ctx, address):
 @click.argument('data', callback=lambda c,p,x: int(x,0))
 @click.pass_context
 def write(ctx, address, data):
-    ctx.obj.exec(f"write {address} {cmd}")
+    ctx.obj.exec(f"write {address} {data}")
