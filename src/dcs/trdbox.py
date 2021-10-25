@@ -79,10 +79,13 @@ def pretrigger(ctx, cmd):
 
 @trdbox.command()
 @click.argument('sfp')
-@click.argument('cmd')
+@click.argument('cmd', type=click.Choice(
+  ['reset', 'phase', 'test1', 'test2', 'prog'], case_sensitive=False))
 @click.pass_context
 def sfp(ctx, sfp, cmd):
-    ctx.obj.exec(f"sfp{sfp} {cmd}")
+    print(ctx.obj.exec(f"sfp{sfp} {cmd}"))
+
+
 
 @trdbox.command()
 @click.argument('address', callback=lambda c,p,x: int(x,0))
