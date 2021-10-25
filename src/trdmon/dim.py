@@ -11,7 +11,9 @@ class servers(urwid.Pile):
 
         self.servers = OrderedDict(
           ztt_dimfed_server = dict(display='ICL'),
-          trdbox =  dict(display='TRDbox'),
+          # trdbox =  dict(display='TRDbox'),
+          ArdPower =  dict(display='Power'),
+          HV =  dict(display='HV'),
         )
 
         # create a widget for each DIM server
