@@ -20,7 +20,7 @@ class servers(urwid.Columns):
         super().__init__([ s['widget'] for s in self.servers.values() ])
 
         # Subscribe to the DIM service that announces all new/removed servers
-        pydim.dic_info_service("DIS_DNS/SERVER_LIST", self.cb, timeout=30)
+        pydim.dic_info_service("DIS_DNS/SERVER_LIST", self.cb, timeout=30, default_value="")
 
 
     def cb(self, data):

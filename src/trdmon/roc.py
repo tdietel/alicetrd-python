@@ -22,7 +22,7 @@ class state(urwid.AttrMap): #(urwid.Text("FOO"),"state")):
         self.state = -999
 
         svcname = f"trd-fee_{sm:02d}_{stack}_{layer}_STATE"
-        pydim.dic_info_service(svcname, "I", self.dimcb, timeout=30)
+        pydim.dic_info_service(svcname, "I", self.dimcb, timeout=30, default_value=-999)
 
 
     def dimcb(self, s):
