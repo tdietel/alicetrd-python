@@ -1,6 +1,11 @@
 __pycache__
 /venv
 /dist
-/src/pydcs_tdietel.egg-info
+/src/pytrd_tdietel.egg-info
 
 /obsolete
+/digits*.csv
+*.npy
+*.o32
+*.o32.gz
+*.o32.bz2

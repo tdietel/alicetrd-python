@@ -1,0 +1,6 @@
+pydim3
+pyzmq
+click
+urwid
+termcolor
+numpy
