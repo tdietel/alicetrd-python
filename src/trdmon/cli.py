@@ -3,8 +3,8 @@
 # from . import start as start_loop
 
 from . import dimwid
-from . import trdbox
-from . import roc
+# from . import trdbox
+# from . import roc
 from . import dim
 
 import logging
@@ -12,7 +12,7 @@ import urwid
 import os
 import pwd
 
-
+from collections import OrderedDict
 
 # ===========================================================================
 
@@ -39,17 +39,17 @@ def cli():
         ('foo', 'light red', 'black'),
     ]
 
-
+    dimservers = OrderedDict(ztt_dimfed_server='ICL', trdbox='TRDbox',ArdPower='PWR')
 
 
     top_widget = urwid.Frame(
         header=urwid.Text(("bg", "HEADER")),
         body =
         urwid.AttrMap(urwid.Filler(urwid.Pile([
-            urwid.LineBox(trdbox.daq()),
-            urwid.LineBox(trdbox.trigger()),
-            urwid.LineBox(roc.info(0,2,0)),
-            urwid.LineBox(dim.servers()),
+            # urwid.LineBox(trdbox.daq()),
+            # urwid.LineBox(trdbox.trigger()),
+            # urwid.LineBox(roc.info(0,2,0)),
+            urwid.LineBox(dim.servers(dimservers)),
         ])), 'bg'),
         focus_part='header')
 
@@ -77,4 +77,9 @@ def cli():
     #     focus_part='header')
 
 
-    dimwid.start(top_widget, palette)
+    # dimwid.start(top_widget, palette)
+    loop = urwid.MainLoop(top_widget, palette, unhandled_input=dimwid.exit_on_enter)
+    dimwid.pipefd = loop.watch_pipe(dimwid.notification_handler)
+    # dimwid.connect_loop(loop)
+
+    loop.run()

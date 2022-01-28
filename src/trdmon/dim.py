@@ -2,30 +2,24 @@
 import urwid
 import pydim
 import logging
-from trdmon.dimwid import dimwid as dimwid
+from trdmon.dimwid import notify_urwid as uwnotify
 
-from collections import OrderedDict
 
 class servers(urwid.Pile):
-    def __init__(self):
+    def __init__(self, servers):
 
-        self.servers = OrderedDict(
-          ztt_dimfed_server = dict(display='ICL'),
-          trdbox =  dict(display='TRDbox'),
-        )
-
-        # create a widget for each DIM server
-        for s in self.servers.values():
-            s['up'] = False
-            s['widget'] = urwid.Text(s['display'])
+        # Create a dictionary with all servers that we want to monitor
+        self.servers = dict()
+        for svcname,disp in servers.items():
+            self.servers[svcname] = dict(
+                display=disp, up=False, widget=urwid.Text(disp)
+            )
 
         # call the constructor of urwid.Pile
         super().__init__([ s['widget'] for s in self.servers.values() ])
 
-
+        # Subscribe to the DIM service that announces all new/removed servers
         pydim.dic_info_service("DIS_DNS/SERVER_LIST", self.cb, timeout=30)
-
-        dimwid.register_callback(self)
 
 
     def cb(self, data):
@@ -51,8 +45,8 @@ class servers(urwid.Pile):
 
                 # logger.debug(f"line: {s} {srv} {up}")
 
-
-        dimwid.request_callback(self)
+        # tell Urwid that we have to refresh the screen
+        uwnotify(self.refresh)
 
     def refresh(self):
         logger=logging.getLogger(__name__)
