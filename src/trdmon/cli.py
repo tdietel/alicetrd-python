@@ -4,7 +4,7 @@
 
 from . import dimwid
 # from . import trdbox
-# from . import roc
+from . import roc
 from . import dim
 
 import logging
@@ -39,7 +39,9 @@ def cli():
         ('foo', 'light red', 'black'),
     ]
 
-    dimservers = OrderedDict(ztt_dimfed_server='ICL', trdbox='TRDbox',ArdPower='PWR')
+    # widget to monitor DIM servers
+    dimservers = urwid.LineBox(dim.servers(OrderedDict(
+        ztt_dimfed_server='ICL', trdbox='TRDbox', ArdPower='PWR')))
 
 
     top_widget = urwid.Frame(
@@ -48,8 +50,9 @@ def cli():
         urwid.AttrMap(urwid.Filler(urwid.Pile([
             # urwid.LineBox(trdbox.daq()),
             # urwid.LineBox(trdbox.trigger()),
-            # urwid.LineBox(roc.info(0,2,0)),
-            urwid.LineBox(dim.servers(dimservers)),
+            urwid.LineBox(roc.info(0,2,0)),
+            # urwid.LineBox(dim.servers(dimservers)),
+            dimservers,
         ])), 'bg'),
         focus_part='header')
 

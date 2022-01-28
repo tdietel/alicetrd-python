@@ -5,7 +5,8 @@ import logging
 from trdmon.dimwid import notify_urwid as uwnotify
 
 
-class servers(urwid.Pile):
+# class servers(urwid.Pile):
+class servers(urwid.Columns):
     def __init__(self, servers):
 
         # Create a dictionary with all servers that we want to monitor
