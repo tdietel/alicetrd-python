@@ -11,12 +11,14 @@ import logging
 import urwid
 import os
 import pwd
+import asyncio
 
 from collections import OrderedDict
 
 # ===========================================================================
 
 def cli():
+
 
     # set up logging to /tmp/trdmon-{username}.log
     username = pwd.getpwuid( os.getuid() )[ 0 ]
@@ -26,23 +28,18 @@ def cli():
     logger=logging.getLogger(__name__)
 
 
-    palette = [
-        ('state', 'light green', 'black'),
-
-        ('fsm:off',     'dark gray',  'black'),
-        ('fsm:static',  'light blue', 'black'),
-        ('fsm:ready',   'light green', 'black'),
-        ('fsm:trans',   'yellow',     'black'),
-        ('fsm:error',   'white',      'light red'),
-
-        ('bg', 'light gray', 'black'),
-        ('foo', 'light red', 'black'),
-    ]
+    # ----------------------------------------------------------------
+    # create widgets
+    # ----------------------------------------------------------------
 
     # widget to monitor DIM servers
     dimservers = urwid.LineBox(dim.servers(OrderedDict(
         ztt_dimfed_server='ICL', trdbox='TRDbox', ArdPower='PWR')))
 
+
+    # ----------------------------------------------------------------
+    # create layout
+    # ----------------------------------------------------------------
 
     top_widget = urwid.Frame(
         header=urwid.Text(("bg", "HEADER")),
@@ -80,9 +77,4 @@ def cli():
     #     focus_part='header')
 
 
-    # dimwid.start(top_widget, palette)
-    loop = urwid.MainLoop(top_widget, palette, unhandled_input=dimwid.exit_on_enter)
-    dimwid.pipefd = loop.watch_pipe(dimwid.notification_handler)
-    # dimwid.connect_loop(loop)
-
-    loop.run()
+    dimwid.run(top_widget)

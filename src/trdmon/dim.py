@@ -2,8 +2,7 @@
 import urwid
 import pydim
 import logging
-from trdmon.dimwid import notify_urwid as uwnotify
-
+import trdmon.dimwid as dimwid
 
 # class servers(urwid.Pile):
 class servers(urwid.Columns):
@@ -20,12 +19,15 @@ class servers(urwid.Columns):
         super().__init__([ s['widget'] for s in self.servers.values() ])
 
         # Subscribe to the DIM service that announces all new/removed servers
-        pydim.dic_info_service("DIS_DNS/SERVER_LIST", self.cb, timeout=30, default_value="")
+        pydim.dic_info_service("DIS_DNS/SERVER_LIST", 
+            dimwid.call(self.update), 
+            timeout=30, default_value="")
 
 
-    def cb(self, data):
+    def update(self, *args):
         logger=logging.getLogger(__name__)
 
+        data = args[0]
         logger.debug(f"DIM servers: received {data}")
         for s in data.split('|'):
             parts = s.split('@')
@@ -44,17 +46,8 @@ class servers(urwid.Columns):
                 if srv in self.servers:
                     self.servers[srv]['up'] = up
 
-                # logger.debug(f"line: {s} {srv} {up}")
-
-        # tell Urwid that we have to refresh the screen
-        uwnotify(self.refresh)
-
-    def refresh(self):
-        logger=logging.getLogger(__name__)
-
         for s in self.servers.values():
-            logger.debug(f"line: {s['display']} {s['up']}")
-
+            # logger.debug(f"line: {s['display']} {s['up']}")
             if s['up']:
                 s['widget'].set_text(("fsm:ready", s['display']))
             else:
