@@ -36,7 +36,7 @@ class state(urwid.AttrMap): #(urwid.Text("FOO"),"state")):
     }
 
     def update(self, state):
-        if state in statemap:
-            self.textwidget.set_text(statemap[state])
+        if state in self.statemap:
+            self.textwidget.set_text(self.statemap[state])
         else:
             self.textwidget.set_text(("fsm:error", f"state:{state:02X}"))
