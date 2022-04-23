@@ -212,13 +212,12 @@ class TimeFrameReader:
 class RdhStreamParser():
     def process(self,data,addr):
         while len(data) > 0:
-                
             rdh = RawDataHeader(data[0:0x40], addr)
             payload = data[0x40:rdh.datasize]
             data = data[rdh.datasize:]
             for i, x in enumerate(np.frombuffer(payload, dtype=np.uint32)):
                 logger.info(f"{addr+0x40+4*i:012X} {x:08X}")
-
+            addr += rdh.datasize
 
 # class TrdCruReader:
 
