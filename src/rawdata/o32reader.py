@@ -4,6 +4,7 @@ import re
 import subprocess
 from datetime import datetime
 from typing import NamedTuple
+from collections.abc import Iterable
 
 class event_t(NamedTuple):
     timestamp: datetime
@@ -13,7 +14,8 @@ class subevent_t(NamedTuple):
     # timestamp: datetime
     equipment_type: int
     equipment_id: int
-    payload: numpy.ndarray
+    payload: Iterable[int]
+    # payload: numpy.ndarray
 
 
 class o32reader:

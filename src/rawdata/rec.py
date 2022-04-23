@@ -7,7 +7,7 @@ import itertools
 
 from .header import TrdboxHeader
 from .linkparser import LinkParser, logflt
-from .logging import ColorFormatter
+from .rawlogging import ColorFormatter
 from .o32reader import o32reader
 from .zmqreader import zmqreader
 

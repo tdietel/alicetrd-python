@@ -10,7 +10,7 @@ from typing import NamedTuple
 from pprint import pprint
 import logging
 
-from .logging import AddLocationFilter
+from .rawlogging import AddLocationFilter
 from .constants import eodmarker,eotmarker,magicmarker
 
 logger = logging.getLogger(__name__)
