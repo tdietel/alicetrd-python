@@ -13,7 +13,7 @@ from typing import NamedTuple
 from datetime import datetime
 
 from .header import TrdboxHeader
-from .linkparser import LinkParser, logflt
+from .trdfeeparser import TrdFeeParser, logflt
 from .rawlogging import ColorFormatter
 from .rawlogging import AddLocationFilter
 

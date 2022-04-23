@@ -296,7 +296,7 @@ class parse_adcdata:
 
 
 # ------------------------------------------------------------------------
-class LinkParser:
+class TrdFeeParser:
 
 	# end_of_tracklet = 0x10001000
 	# end_of_data     = 0x00000000

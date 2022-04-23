@@ -9,10 +9,10 @@ import itertools
 from pprint import pprint
 
 from .header import TrdboxHeader
-from .linkparser import LinkParser, logflt
+from .trdfeeparser import TrdFeeParser, logflt
 from .rawlogging import ColorFormatter
 from .o32reader import o32reader
-from .tfreader import TimeFrameReader
+from .tfreader import TimeFrameReader, RdhStreamParser
 from .zmqreader import zmqreader
 
 class StdoutHandler(logging.StreamHandler):
@@ -52,27 +52,38 @@ def evdump(source, loglevel, suppress, quiet, skip_events):
     for s in suppress:
         logflt.dword_types[s.upper()]['suppress'] = True
 
+    # The parsing of TRD FEE data will be handled by the TrdFeeParser
+    # At this point, we can add options to tune it's behaviour
+    lp = TrdFeeParser()
+    # lp.set_skip_events(skip_events)
+
+
     # Instantiate the reader that will get events and subevents from the source
     if source.endswith(".o32") or source.endswith(".o32.bz2"):
         reader = o32reader(source)
+        reader.set_trd_fee_parser(lp)
     elif source.endswith(".tf"):
         reader = TimeFrameReader(source)
+        rdhparser = RdhStreamParser()
+        reader.parsers['TRD'] = rdhparser
+
     elif source.startswith('tcp://'):
         reader = zmqreader(source)
     else:
         raise ValueError(f"unknown source type: {source}")
 
-    try:
-        # The actual parsing of TRD subevents is handled by the LinkParser
-        lp = LinkParser()
+    # We leave the rest to the reader
+    reader.process(skip_events=skip_events)
 
-        # Loop through events and subevents
-        for evno,event in enumerate(reader):
-            if evno<skip_events:
-                continue
+    # try:
 
-            for subevent in event.subevents:
-                lp.process(subevent.payload)
+    #     # Loop through events and subevents
+    #     for evno,event in enumerate(reader):
+    #         if evno<skip_events:
+    #             continue
 
-    except BrokenPipeError:
-        return
+    #         for subevent in event.subevents:
+    #             lp.process(subevent.payload)
+
+    # except BrokenPipeError:
+    #     return

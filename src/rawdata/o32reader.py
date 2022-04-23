@@ -72,6 +72,22 @@ class o32reader:
 
         return event_t(header['time stamp'], subevents)
 
+    def process(self, skip_events=0):
+        """This method will handle the reading process.
+        
+        It is meant as a replacement for the lecacy iterator interface."""
+
+        # Loop through events and subevents
+        for evno, event in enumerate(self):
+            if evno < skip_events:
+                continue
+
+            for subevent in event.subevents:
+                self.trd_fee_parser.process(subevent.payload)
+
+    def set_trd_fee_parser(self, p):
+        self.trd_fee_parser = p
+
 
     def read_event_header(self):
 
@@ -155,3 +171,5 @@ class o32reader:
         if isinstance(self.lastline, bytes):
             self.lastline = self.lastline.decode()
         return self.lastline
+
+
