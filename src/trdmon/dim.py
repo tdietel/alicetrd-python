@@ -2,35 +2,32 @@
 import urwid
 import pydim
 import logging
-from trdmon.dimwid import dimwid as dimwid
+import trdmon.dimwid as dimwid
 
-from collections import OrderedDict
+# class servers(urwid.Pile):
+class servers(urwid.Columns):
+    def __init__(self, servers):
 
-class servers(urwid.Pile):
-    def __init__(self):
-
-        self.servers = OrderedDict(
-          ztt_dimfed_server = dict(display='ICL'),
-          trdbox =  dict(display='TRDbox'),
-        )
-
-        # create a widget for each DIM server
-        for s in self.servers.values():
-            s['up'] = False
-            s['widget'] = urwid.Text(s['display'])
+        # Create a dictionary with all servers that we want to monitor
+        self.servers = dict()
+        for svcname,disp in servers.items():
+            self.servers[svcname] = dict(
+                display=disp, up=False, widget=urwid.Text(disp)
+            )
 
         # call the constructor of urwid.Pile
         super().__init__([ s['widget'] for s in self.servers.values() ])
 
+        # Subscribe to the DIM service that announces all new/removed servers
+        pydim.dic_info_service("DIS_DNS/SERVER_LIST", 
+            dimwid.call(self.update), 
+            timeout=30, default_value="")
 
-        pydim.dic_info_service("DIS_DNS/SERVER_LIST", self.cb, timeout=30)
 
-        dimwid.register_callback(self)
-
-
-    def cb(self, data):
+    def update(self, *args):
         logger=logging.getLogger(__name__)
 
+        data = args[0]
         logger.debug(f"DIM servers: received {data}")
         for s in data.split('|'):
             parts = s.split('@')
@@ -49,17 +46,8 @@ class servers(urwid.Pile):
                 if srv in self.servers:
                     self.servers[srv]['up'] = up
 
-                # logger.debug(f"line: {s} {srv} {up}")
-
-
-        dimwid.request_callback(self)
-
-    def refresh(self):
-        logger=logging.getLogger(__name__)
-
         for s in self.servers.values():
-            logger.debug(f"line: {s['display']} {s['up']}")
-
+            # logger.debug(f"line: {s['display']} {s['up']}")
             if s['up']:
                 s['widget'].set_text(("fsm:ready", s['display']))
             else:
