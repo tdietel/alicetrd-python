@@ -8,8 +8,11 @@ import subprocess
 import itertools
 from pprint import pprint
 
+from rawdata.base import DumpParser
+
 from .header import TrdboxHeader
-from .trdfeeparser import TrdFeeParser, logflt
+from .trdfeeparser import TrdFeeParser, TrdCruParser
+# from .trdfeeparser import logflt
 from .rawlogging import ColorFormatter
 from .o32reader import o32reader
 from .tfreader import TimeFrameReader, RdhStreamParser
@@ -48,9 +51,9 @@ def evdump(source, loglevel, suppress, quiet, skip_events):
     logging.basicConfig(level=loglevel, handlers=[lh])
 
     # Select dwords to suppress
-    logflt.set_verbosity(5-quiet)
-    for s in suppress:
-        logflt.dword_types[s.upper()]['suppress'] = True
+    # logflt.set_verbosity(9)
+    # for s in suppress:
+    #     logflt.dword_types[s.upper()]['suppress'] = True
 
     # The parsing of TRD FEE data will be handled by the TrdFeeParser
     # At this point, we can add options to tune it's behaviour
@@ -64,7 +67,9 @@ def evdump(source, loglevel, suppress, quiet, skip_events):
         reader.set_trd_fee_parser(lp)
     elif source.endswith(".tf"):
         reader = TimeFrameReader(source)
-        rdhparser = RdhStreamParser()
+        # payloadparser = DumpParser(logging.getLogger("raw.rdh.payload"))
+        payloadparser = TrdCruParser()
+        rdhparser = RdhStreamParser(payloadparser)
         reader.parsers['TRD'] = rdhparser
 
     elif source.startswith('tcp://'):

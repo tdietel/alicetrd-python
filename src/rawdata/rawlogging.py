@@ -90,16 +90,16 @@ class AddLocationFilter(logging.Filter):
 
         rectype = record.msg[:3]
 
-        if rectype in self.suppress:
-            return False
+        # if rectype in self.suppress:
+        #     return False
 
         if rectype not in self.dword_types:
             return True
 
         opt = self.dword_types[rectype]
 
-        if 'suppress' in opt and opt['suppress']:
-            return False
+        # if 'suppress' in opt and opt['suppress']:
+        #     return False
 
         record.msg = f"{self.where}{opt['prefix']} {record.msg:45s}"
 
