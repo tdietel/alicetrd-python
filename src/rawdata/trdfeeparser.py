@@ -1,13 +1,8 @@
 import numpy as np
-import math
 from struct import unpack
-#import pylab as pl
 
 from functools import wraps
-# import functools
 from collections import namedtuple
-# from typing import NamedTuple
-# from pprint import pprint
 import logging
 
 from .rawlogging import AddLocationFilter
@@ -319,10 +314,6 @@ class parse_adcdata:
 # ------------------------------------------------------------------------
 class TrdFeeParser:
 
-	# end_of_tracklet = 0x10001000
-	# end_of_data     = 0x00000000
-
-
 	#Defining the initial variables for class
 	def __init__(self, store_digits = None):
 		self.ctx = ParsingContext
@@ -369,7 +360,7 @@ class TrdFeeParser:
 					try:
 						 result = fct(self.ctx,dword)
 
-					except AssertionError as ex:
+					except AssertionError:
 						continue
 
 					if not isinstance(result, dict):
@@ -378,16 +369,11 @@ class TrdFeeParser:
 					if 'readlist' in result:
 						self.readlist.extend(result['readlist'])
 
-					# the function handled the dword -> we are done
-					# if 'description' in result:
-					# 	print(f"{ctx.current_dword:06x} {dword:08x}  ", end="")
-					# 	print(result['description'])
-
 					break
 
 				else:
 					logger.error(logflt.where 
-						+ "NO MATCH - expected {expected} found {dword}")
+						+ "NO MATCH - expected {expected}")
 					# check_dword(dword)
 
 					# skip everything until EOD
@@ -429,7 +415,6 @@ class TrdFeeParser:
 					# it does not understand the dword
 					try:
 						 result = fct(self.ctx,dword)
-						#  logger.info(f"{fct.__name__}")
 
 					except AssertionError as ex:
 						continue
@@ -440,18 +425,12 @@ class TrdFeeParser:
 					if 'readlist' in result:
 						self.readlist.extend(result['readlist'])
 
-					# the function handled the dword -> we are done
-					# if 'description' in result:
-					# 	print(f"{ctx.current_dword:06x} {dword:08x}  ", end="")
-					# 	print(result['description'])
-
 					break
 
 				else:
 					logger.error(logflt.where
 						+ f"NO MATCH - expected {[x.__name__ for x in expected]} found {dword:X}")
 					# check_dword(dword)
-					# exit(1)
 
 					# skip everything until EOD
 					self.readlist.extend([[find_eod_mcmhdr]])
@@ -482,6 +461,7 @@ class TrdHalfCruHeader(BaseHeader):
 		self.hdrsize = 99
 
 	@describe("tttt : eeee : ssss : cccc : cccc : cccc : vvvv : vvvv")
+	# TODO @assignattr(self, version="v", stopbit="s", bc="c", endpoint="e", evtype="t")
 	def parse_hw0(self, data, fields):
 		self.version = fields.v
 		self.stopbit = fields.s
@@ -510,33 +490,6 @@ class TrdHalfCruHeader(BaseHeader):
 				for j in range(2*i-15, 2*i-17, -1))
 		else:
 			return dwi
-		# dword_desc = list(("HCRU ", " - reserved -"))
-
-		# for i in range(4):
-		# 	dword_desc.append(" ".join(f"{4*i+j}:") for j in range(4))
-		
-		# for i in range(10):
-			
-
-
-		# 	dwor"3:{errflags[3]:X} 3:{errflags[3]:X} 3:{errflags[3]:X} 3:{errflags[3]:X} ", "errflags",
-		# 	"errflags", "errflags+res", 
-		# 	"res", "res",
-		# 	"1:{datasize[1]:X} 0:{datasize[0]:X}",
-		# 	"3:{datasize[3]:X} 2:{datasize[2]:X}",
-		# 	"5:{datasize[5]:X} 4:{datasize[4]:X}",
-		# 	"7:{datasize[7]:X} 6:{datasize[6]:X}",
-		# 	"9:{datasize[9]:X} 8:{datasize[8]:X}",
-		# 	"b:{datasize[11]:X} a:{datasize[10]:X}",
-		# 	"d:{datasize[13]:X} c:{datasize[12]:X}",
-		# 	"   - reserved -   e:{datasize[14]:X}",
-		# 	"", "",
-		# 	"", "",
-		# 	"", ""))
-		# 	# "", "", "", "", "", "", "", "",
-		# 	# "", "", "", "", "", "", "", ""))
-		# return dwi + dword_desc[i].format(**vars(self))
-
 
 class TrdCruParser(BaseParser):
 	def __init__(self):
@@ -552,21 +505,16 @@ class TrdCruParser(BaseParser):
 
 	def read(self, stream, size):
 
-		# logger.info(f"HCRU stream called for pos {stream.tell()} for {size} bytes")
-
 		maxpos = stream.tell() + size
 		while stream.tell() < maxpos:
 
 			avail_bytes = maxpos - stream.tell()
 			if avail_bytes == 32:
 				padding = stream.read(32)
-				# logger.info(f"padding: {padding} expexted{'\\xee'*32} ")
 				if padding != '\xee'*32:
 					pass
 					# raise ValueError(f"invalid padding word: {padding} {len(padding)}")
 				continue
-
-			# logger.info(f"Read HCRU header at f{stream.tell()}, maxpos = {maxpos}")
 
 			if self.hcruheader is None:
 				if avail_bytes < TrdHalfCruHeader.header_size:
@@ -605,43 +553,6 @@ class TrdCruParser(BaseParser):
 			
 
 
-				# self.feeparser.read
-
-            # payload_size = rdh.datasize - TrdHalfCruHeader.header_size
-            # if size < processed_bytes + payload_size:
-            #     raise DataError("Insufficient data")
-            # stream.seek(rdh.payload_size, 1)
-
-	def parse(self, data, addr):
-		hdrsize = 0x80
-		offset = 0
-		# while offset < len(data):
-        # 	# read the RDH
-		# 	if self.hcruheader is None:
-		# 		self.hcruheader = TrdHalfCruHeader(data[offset:offset+hdrsize], addr)
-		# 		offset += hdrsize
-
-		# 	if self.link is None:
-		# 		self.link = 0:
-
-		# 		for self.link in range(15):
-		# 			flags = self.hcruheader.errflags[i]
-		# 			size = self.hcruheader.datasize[i]
-
-		# 			if size == 0:
-		# 				next
-
-		# 			self.feeparser.parse(data[offset:offset+size], addr+offset)
-
-		# 		offset += size
-
-		# 	self.link = None
-        #     # move to next RDH+data
-        #     data = data[rdh.datasize:]
-        #     addr += rdh.datasize
-
-
-
 def check_dword(dword):
 
 	ctx = dict()
@@ -656,4 +567,3 @@ def check_dword(dword):
 		except AssertionError:
 			continue
 
-		# log.debug("Match:", p.__name__)

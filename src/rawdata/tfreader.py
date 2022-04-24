@@ -4,13 +4,7 @@
 import logging
 from sqlite3 import DataError
 import numpy as np
-# from collections import namedtuple
-# from collections.abc import Iterable
 from struct import unpack
-# from typing import NamedTuple
-# from datetime import datetime
-from struct import unpack
-# from functools import wraps
 
 from .rawlogging import AddLocationFilter
 from .base import BaseParser, BaseHeader
