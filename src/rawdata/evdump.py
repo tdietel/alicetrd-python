@@ -21,8 +21,7 @@ from .zmqreader import zmqreader
 class StdoutHandler(logging.StreamHandler):
 
     def __init__(self):
-        super().__init__()
-        self.setStream(sys.stdout)
+        super().__init__(sys.stdout)
         self.setFormatter(ColorFormatter())
 
         ## It would be nice to open a pager directly...
