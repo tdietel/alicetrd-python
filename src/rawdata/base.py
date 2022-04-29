@@ -54,23 +54,35 @@ class BaseHeader:
             raise TypeError(
                 f"Invalid DataHeader raw data format {type(data)} {len(data)}")
 
-        self.parse(data)
-        self.log(data, addr)
+        self._addr = addr
+        self._data = data
+        # print(self.keys())
+        # print(self.unpack(data))
+        for k, v in zip(self.keys(), self.unpack(data)):
+            setattr(self,k,v)
+        
 
     @classmethod
     def read(cls, stream):
         addr = stream.tell()
         data = stream.read(cls.header_size)
-        return cls(data,addr)
+        print(f"Reading {cls.__name__} at offset 0x{addr:06X}")
+        header = cls(data, addr)
+        header.hexdump()
+        return header
 
-    def parse(data):
+    def unpack(self, data):
         pass
 
-    def log(self, data, addr):
+    def keys(self):
+        pass
+
+    def hexdump(self):
+
+    # def log(self, data, addr):
         logger = logging.getLogger("raw.rdh")
-        for i, dw in enumerate(unpack("<16L", data)):
-            logger.info(f"{addr+4*i:012X} {dw:08X}    "
-                        + self.describe_dword(i))
+        for i, dw in enumerate(unpack(f"<{self.header_size/4}L", data)):
+            logger.info(f"{addr+4*i:012X} {dw:08X}")
 
     def describe_dword(self, i):
         return ""

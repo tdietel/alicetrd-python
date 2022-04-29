@@ -5,9 +5,12 @@ from functools import wraps
 from collections import namedtuple
 import logging
 
+from rawdata.tfreader import RawDataHeader
+
 from .rawlogging import AddLocationFilter
 from .constants import eodmarker,eotmarker,magicmarker
 from .base import BaseHeader, BaseParser, DumpParser
+from .bitstruct import BitStruct, HexDump
 
 logger = logging.getLogger(__name__)
 logflt = AddLocationFilter()
@@ -446,50 +449,95 @@ class TrdFeeParser:
 			print( [ f.__name__ for f in self.readlist[j] ] )
 
 
+@BitStruct(  # each line corresponds to a 64-bit word
+    version=8, cru=12, stop=4, ep=4, evtype=4, res0=32, # word0
+   	e00=8, e01=8, e02=8, e03=8, e04=8, e05=8, e06=8, e07=8,
+   	e08=8, e09=8, e10=8, e11=8, e12=8, e13=8, e14=8, res1=8,
+	res2=64,
+	s00=16, s01=16, s02=16, s03=16, 
+	s04=16, s05=16, s06=16, s07=16,
+   	s08=16, s09=16, s10=16, s11=16, 
+	s12=16, s13=16, s14=16, res3=16)
 class TrdHalfCruHeader(BaseHeader):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
 
-	header_size = 0x40 # 256 bits = 64 bytes
+		# build tuples with error flags and data size for each link
+		self.errflags = tuple(getattr(self,f"e{i:02}") for i in range(15))
+		self.datasize = tuple(32*getattr(self,f"s{i:02}") for i in range(15))
 
-	""" TRD CRU Header"""
-	def parse(self, data):
-		fields = unpack(">L4x15B9x15H2x", data)
-		# self.parse_hw0(fields[0])
-		self.errflags = tuple(fields[1:16])
-		self.datasize = tuple(fields[16:31])
+		# calculate the expected offset for each link
+		base = self._addr - RawDataHeader.header_size # RDH base address
+		pagesize = 0x2000 - RawDataHeader.header_size # payload per RDH page
 
-		self.version = 42
-		self.hdrsize = 99
+		rawoffset = self.header_size # link data starts after HCRU header
+		offsets = list()
+		for i, sz in enumerate(self.datasize):
+			npages = rawoffset // pagesize
+			# expect = base + 0x2000*npages + RawDataHeader.header_size + rawoffset%pagesize
+			offsets.append(
+				base # RDH base address
+				+ 0x2000*npages # size of complete pages (header+payload)
+				+ RawDataHeader.header_size # RDH of incomplete page
+				+ rawoffset%pagesize # payload of incomplete page
+			)
+			# logger.info(f"Link {i} expected to start at 0x{expect:06x}")
+			# HexDump.add_marker(expect, "HCRU: Link{02i}")
+			rawoffset += sz
 
-	@describe("tttt : eeee : ssss : cccc : cccc : cccc : vvvv : vvvv")
-	# TODO @assignattr(self, version="v", stopbit="s", bc="c", endpoint="e", evtype="t")
-	def parse_hw0(self, data, fields):
-		self.version = fields.v
-		self.stopbit = fields.s
-		self.bc = fields.c
-		self.endpoint = fields.e
-		self.evtype = t
+		self.offset = tuple(offsets)
+		for i, off in enumerate(self.offset):
+			logger.info(f"Link {i} expected to start at 0x{off:06x}")
 
-	def describe_dword(self, i):
-		dwi = f"HCRU[{i//4}.{i%2}]  "
+		for i, desc in enumerate(self._hexdump_desc):
+			self._hexdump_desc[i] = f"HCRU[{i//4}.{i%4}]  {desc}"
+		# logger.info(self._hexdump_desc)
 
-		if i==0:
-			return dwi + "bla"
-		elif i==1:
-			return dwi + "bla"
-		elif i<=4:
-			return dwi + " ".join(
-				f"{j:x}:{self.errflags[j]:x}" for j in range(4*i-5,4*i-9,-1))
-		elif i==5:
-			return dwi + "    " + " ".join(
-				f"{j:x}:{self.errflags[j]:x}" for j in range(4*i-6, 4*i-9, -1))
-		elif i<8:
-			return dwi
-		elif i <= 14:
-			return dwi + " ".join(
-				f"{j:x}:{self.datasize[j]:04X}({self.errflags[j]:x})" 
-				for j in range(2*i-15, 2*i-17, -1))
-		else:
-			return dwi
+
+# class TrdHalfCruHeader(BaseHeader):
+
+# 	header_size = 0x40 # 256 bits = 64 bytes
+
+# 	""" TRD CRU Header"""
+# 	def parse(self, data):
+# 		fields = unpack("<L4x15B9x15H2x", data)
+# 		# self.parse_hw0(fields[0])
+# 		self.errflags = tuple(fields[1:16])
+# 		self.datasize = tuple(fields[16:31])
+
+# 		self.version = 42
+# 		self.hdrsize = 99
+
+# 	@describe("tttt : eeee : ssss : cccc : cccc : cccc : vvvv : vvvv")
+# 	# TODO @assignattr(self, version="v", stopbit="s", bc="c", endpoint="e", evtype="t")
+# 	def parse_hw0(self, data, fields):
+# 		self.version = fields.v
+# 		self.stopbit = fields.s
+# 		self.bc = fields.c
+# 		self.endpoint = fields.e
+# 		self.evtype = t
+
+# 	def describe_dword(self, i):
+# 		dwi = f"HCRU[{i//4}.{i%2}]  "
+
+# 		if i==0:
+# 			return dwi + "bla"
+# 		elif i==1:
+# 			return dwi + "bla"
+# 		elif i<=4:
+# 			return dwi + " ".join(
+# 				f"{j:x}:{self.errflags[j]:x}" for j in range(4*i-5,4*i-9,-1))
+# 		elif i==5:
+# 			return dwi + "    " + " ".join(
+# 				f"{j:x}:{self.errflags[j]:x}" for j in range(4*i-6, 4*i-9, -1))
+# 		elif i<8:
+# 			return dwi
+# 		elif i <= 14:
+# 			return dwi + " ".join(
+# 				f"{j:x}:{self.datasize[j]:04X}({self.errflags[j]:x})" 
+# 				for j in range(2*i-15, 2*i-17, -1))
+# 		else:
+# 			return dwi
 
 class TrdCruParser(BaseParser):
 	def __init__(self):
@@ -505,6 +553,9 @@ class TrdCruParser(BaseParser):
 
 	def read(self, stream, size):
 
+		hdump = HexDump()
+		hdump._markers[0x00000000BB88] = ["here"]
+
 		maxpos = stream.tell() + size
 		while stream.tell() < maxpos:
 
@@ -518,12 +569,13 @@ class TrdCruParser(BaseParser):
 
 			if self.hcruheader is None:
 				if avail_bytes < TrdHalfCruHeader.header_size:
+					hdump.fromfile(stream, avail_bytes)
+				
 					raise ValueError("Insufficient data for Half-CRU header")
 
 				self.hcruheader = TrdHalfCruHeader.read(stream)
 				self.link = None
 				self.unread = None
-				logger.info("Read HCRU header")
 
 			if self.link is None:
 				self.link = 0
@@ -548,8 +600,10 @@ class TrdCruParser(BaseParser):
 					self.unread = None
 				
 			if self.hcruheader is None:
-				logger.info("{maxpos - stream.tell()} padding bytes")
-				stream.seek(maxpos-1)
+				logger.info(f"{maxpos - stream.tell()} padding bytes")
+				hdump.fromfile(stream, maxpos - stream.tell())
+				# assert(False)
+				# stream.seek(maxpos-1)
 			
 
 
