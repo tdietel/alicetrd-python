@@ -388,12 +388,16 @@ class TrdFeeParser:
 				logger.error(logflt.where + "extra data after end of readlist")
 				break
 
+	def reset(self):
+		self.readlist = [list([parse_tracklet, parse_eot])]
+
 	def read(self, stream, size):
 
 		self.ctx.current_linkpos = -1
 
 		if self.readlist is None:
-			self.readlist = [ list([parse_tracklet, parse_eot]) ]
+			self.reset()
+			# self.readlist = [ list([parse_tracklet, parse_eot]) ]
 
 		# logger.info(f"{self.readlist}")
 
@@ -494,50 +498,6 @@ class TrdHalfCruHeader(BaseHeader):
 		# logger.info(self._hexdump_desc)
 
 
-# class TrdHalfCruHeader(BaseHeader):
-
-# 	header_size = 0x40 # 256 bits = 64 bytes
-
-# 	""" TRD CRU Header"""
-# 	def parse(self, data):
-# 		fields = unpack("<L4x15B9x15H2x", data)
-# 		# self.parse_hw0(fields[0])
-# 		self.errflags = tuple(fields[1:16])
-# 		self.datasize = tuple(fields[16:31])
-
-# 		self.version = 42
-# 		self.hdrsize = 99
-
-# 	@describe("tttt : eeee : ssss : cccc : cccc : cccc : vvvv : vvvv")
-# 	# TODO @assignattr(self, version="v", stopbit="s", bc="c", endpoint="e", evtype="t")
-# 	def parse_hw0(self, data, fields):
-# 		self.version = fields.v
-# 		self.stopbit = fields.s
-# 		self.bc = fields.c
-# 		self.endpoint = fields.e
-# 		self.evtype = t
-
-# 	def describe_dword(self, i):
-# 		dwi = f"HCRU[{i//4}.{i%2}]  "
-
-# 		if i==0:
-# 			return dwi + "bla"
-# 		elif i==1:
-# 			return dwi + "bla"
-# 		elif i<=4:
-# 			return dwi + " ".join(
-# 				f"{j:x}:{self.errflags[j]:x}" for j in range(4*i-5,4*i-9,-1))
-# 		elif i==5:
-# 			return dwi + "    " + " ".join(
-# 				f"{j:x}:{self.errflags[j]:x}" for j in range(4*i-6, 4*i-9, -1))
-# 		elif i<8:
-# 			return dwi
-# 		elif i <= 14:
-# 			return dwi + " ".join(
-# 				f"{j:x}:{self.datasize[j]:04X}({self.errflags[j]:x})" 
-# 				for j in range(2*i-15, 2*i-17, -1))
-# 		else:
-# 			return dwi
 
 class TrdCruParser(BaseParser):
 	def __init__(self):
@@ -591,6 +551,8 @@ class TrdCruParser(BaseParser):
 				self.unread -= readsize
 
 			if self.unread == 0:
+				logger.info(f"DONE processing link {self.link}")
+				self.feeparser.reset() # start new link
 				if self.link < 14:
 					self.link += 1
 					self.unread = None

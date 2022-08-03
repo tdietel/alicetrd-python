@@ -64,12 +64,21 @@ def evdump(source, loglevel, suppress, quiet, skip_events):
     if source.endswith(".o32") or source.endswith(".o32.bz2"):
         reader = o32reader(source)
         reader.set_trd_fee_parser(lp)
+
     elif source.endswith(".tf"):
         reader = TimeFrameReader(source)
         # payloadparser = DumpParser(logging.getLogger("raw.rdh.payload"))
         payloadparser = TrdCruParser()
         rdhparser = RdhStreamParser(payloadparser)
         reader.parsers['TRD'] = rdhparser
+
+    elif source.endswith(".lnk"):
+        reader = TimeFrameReader(source)
+        # payloadparser = DumpParser(logging.getLogger("raw.rdh.payload"))
+        payloadparser = TrdCruParser()
+        rdhparser = RdhStreamParser(payloadparser)
+        reader.parsers['TRD'] = rdhparser
+
 
     elif source.startswith('tcp://'):
         reader = zmqreader(source)
