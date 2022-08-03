@@ -13,7 +13,7 @@ from rawdata.base import DumpParser
 from .header import TrdboxHeader
 from .trdfeeparser import TrdFeeParser, TrdCruParser
 # from .trdfeeparser import logflt
-from .rawlogging import ColorFormatter
+from .rawlogging import ColorFormatter, HexDump
 from .o32reader import o32reader
 from .tfreader import TimeFrameReader, RdhStreamParser
 from .zmqreader import zmqreader
@@ -59,6 +59,7 @@ def evdump(source, loglevel, suppress, quiet, skip_events):
     lp = TrdFeeParser()
     # lp.set_skip_events(skip_events)
 
+    hdump = HexDump()
 
     # Instantiate the reader that will get events and subevents from the source
     if source.endswith(".o32") or source.endswith(".o32.bz2"):
@@ -67,9 +68,13 @@ def evdump(source, loglevel, suppress, quiet, skip_events):
 
     elif source.endswith(".tf"):
         reader = TimeFrameReader(source)
+        # reader.log_header = lambda x: x.hexdump()
+
         # payloadparser = DumpParser(logging.getLogger("raw.rdh.payload"))
         payloadparser = TrdCruParser()
+        payloadparser.hexdump = hdump
         rdhparser = RdhStreamParser(payloadparser)
+        rdhparser.hexdump = hdump
         reader.parsers['TRD'] = rdhparser
 
     elif source.endswith(".lnk"):

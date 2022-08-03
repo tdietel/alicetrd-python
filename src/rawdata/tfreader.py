@@ -6,7 +6,7 @@ from sqlite3 import DataError
 import numpy as np
 from struct import unpack
 
-from .rawlogging import AddLocationFilter
+from .rawlogging import AddLocationFilter, HexDump
 from .base import BaseParser, BaseHeader
 from .bitstruct import BitStruct
 
@@ -20,8 +20,10 @@ class DataHeader:
         if not isinstance(rawdata,bytes) or len(rawdata)!=0x60:
             raise TypeError(f"Invalid DataHeader raw data format {len(rawdata)}")
 
+        self._addr = addr
+        self._data = rawdata
         self.parse(rawdata)
-        self.log(rawdata, addr)
+        # self.log(rawdata, addr)
 
     def parse(self, rawdata):
 
@@ -55,13 +57,13 @@ class DataHeader:
         self.orbit, self.tfcount, self.runno = fields[0:3]
         
     def __str__(self):
-        return f"{self.magic} 0x{self.hdrsize:X} - {self.datadesc} - {self.origin}/{self.subspec} {self.runno} {self.part} flags=0x{self.flags:X} payload = {self.datasize}b parts={self.nparts}"
+        return f"{self.magic} - {self.datadesc} - {self.origin}/{self.subspec}: part #{self.part} of {self.nparts} payload={self.datasize}b"
 
-    def log(self, data, addr):
-        for i, dw in enumerate(unpack("<24L", data)):
+    def hexdump(self):
+        for i, dw in enumerate(unpack("<24L", self._data)):
             hl = 'h' if i % 2 else 'l'
             logging.getLogger("raw.o2h").info(
-                f"{addr+4*i:012X} {dw:08X}    O2DH  "
+                f"{self._addr+4*i:012X} {dw:08X}    O2DH  "
                 + self.describe_dword(i))
 
     def describe_dword(self, i):
@@ -93,6 +95,7 @@ class RawDataHeader(BaseHeader):
         assert(self.zero7==0)
         
         self._hexdump_desc[0] = "RDHv{version} fee={fee}"
+        self._hexdump_desc = HexDump.colorize(self._hexdump_desc)
         # self._hexdump_desc[8:16] = ""
 
         # for i, desc in enumerate(self._hexdump_desc):
@@ -176,6 +179,8 @@ class TimeFrameReader:
     def __init__(self, filename):
         self.file = open(filename,"rb")
         self.parsers = dict()
+        # self.log_header = lambda x: x.hexdump()
+        self._skipped_stf = dict()
 
     def process(self, skip_events=0):
         while self.file.readable():
@@ -184,17 +189,39 @@ class TimeFrameReader:
             if len(data)==0:
                 break
             hdr = DataHeader(data, addr)
+            self.log_header(hdr)
 
             if hdr.origin in self.parsers:
                 self.parsers[hdr.origin].read(self.file, hdr.datasize)
 
             else:
                 self.file.seek(hdr.datasize, 1)  # skip over payload
+        self.log_skipped_stf()
+
+    def log_header(self, hdr):
+        if hdr.origin in self.parsers or hdr.datadesc.startswith("FILE_STF"):
+            self.log_skipped_stf()
+            logging.getLogger("raw.o2h").info(hdr)
+        else:
+            key = hdr.origin
+            # key = f"{hdr.datadesc}:{hdr.origin}"
+            if key in self._skipped_stf:
+                self._skipped_stf[key] += 1
+            else:
+                self._skipped_stf[key] = 1
+
+    def log_skipped_stf(self):
+        if len(self._skipped_stf) > 0:
+            msg = "... skipped STFs: "
+            for key,count in self._skipped_stf.items():
+                msg += f" {key}({count})"
+            logging.getLogger("raw.o2h").info(msg)
 
 
 class RdhStreamParser(BaseParser):
     def __init__(self, payload_parser):
         self.parser = payload_parser
+        self.hexdump = lambda x: None # Default: no logging
 
     def read(self, stream, size):
 
@@ -204,10 +231,9 @@ class RdhStreamParser(BaseParser):
                 raise DataError("Insufficient data")
 
             rdh = RawDataHeader.read(stream)
+            self.hexdump(rdh)
             payload_size = rdh.datasize - RawDataHeader.header_size
             self.parser.read(stream, payload_size)
-
-
 
 if __name__=="__main__":
     reader = TimeFrameReader(

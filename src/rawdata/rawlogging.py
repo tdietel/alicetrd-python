@@ -1,6 +1,7 @@
 
 import logging
-from termcolor import colored
+import struct
+# from termcolor import colored
 
 # https://alexandra-zaharia.github.io/posts/make-your-own-custom-color-formatter-with-python-logging/
 
@@ -104,3 +105,66 @@ class AddLocationFilter(logging.Filter):
         record.msg = f"{self.where}{opt['prefix']} {record.msg:45s}"
 
         return True
+
+
+class HexDump:
+
+    _markers = dict()
+
+    def __init__(self, bitwidth=32, logger_name="hexdump"):
+        self.logger = logging.getLogger(logger_name)
+        self.fmtchar = {32: "I"}[bitwidth]
+        self.introfmt = {
+            32: "{addr:012X} {word:08X}    "
+        }[bitwidth]
+        # self.desc_fmt
+        self.bitwidth = 32
+
+    def fromfile(self, stream, nbytes):
+        addr = stream.tell()
+        data = stream.read(nbytes)
+        self.dump(data,addr)
+
+    @classmethod
+    def add_marker(cls, addr, message):
+        if addr in cls._markers:
+            cls._markers[addr].append(message)
+        else:
+            cls._markers[addr] = [message]
+
+    def dump(self, data, addr, desc=None):
+        for i,words in enumerate(struct.iter_unpack(self.fmtchar,data)):
+            if addr+4*i in self._markers:
+                for m in self._markers[addr+4*i]:
+                    self.logger.info(f"MARK: {m}")
+            self.dump_dword(addr+4*i, words[0], desc[i] if desc is not None else None)
+
+    def dump_dword(self, addr, word, desc=None):
+        text = self.introfmt.format(addr=addr, word=word)
+        if desc is not None:
+            text += desc
+        self.logger.info(text)
+
+    def __call__(self, *args):
+
+        if len(args) == 1:
+            # render all the descriptions
+            desc = list(d.format(**vars(args[0])) for d in args[0]._hexdump_desc)
+
+            # ensure we have the same width for all fields
+            maxlen = max(len(x) for x in desc)
+            for i,d in enumerate(desc):
+                desc[i] += " "*(maxlen-len(d)+3)
+
+            self.dump(args[0]._data, args[0]._addr, desc)        
+        else:
+            self.dump_dword(*args)
+
+
+    def colorize(fmts, first='\033[1;37;40m ', body='\033[0;37;100m '):
+        if len(fmts) >= 1:
+            fmts[0] = first + fmts[0]
+        for i,f in enumerate(fmts[1:]):
+            fmts[i+1] = body + f
+        return fmts
+
