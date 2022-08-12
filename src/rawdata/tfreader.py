@@ -90,17 +90,19 @@ class DataHeader:
     detfield=32, detpar=16, zero6=16,  # word6
     zero7=64) # word7
 class RawDataHeader(BaseHeader):
+    """ RDH v6 
+        
+    https: // gitlab.cern.ch/AliceO2Group/wp6-doc/-/blob/master/rdh/RDHv6.md"""
+
     def __init__(self,data,addr):
         super().__init__(data,addr)
         assert(self.zero7==0)
         
         self._hexdump_desc[0] = "RDHv{version} fee={fee}"
-        self._hexdump_desc = HexDump.colorize(self._hexdump_desc)
+
+        self._hexdump_fmt = ('\033[1;37;40m', '\033[0;37;100m')
+
         # self._hexdump_desc[8:16] = ""
-
-        # for i, desc in enumerate(self._hexdump_desc):
-        #     self._hexdump_desc[i] = f"RDH[{i//2}.{i%2}]  {desc}"
-
 
         # self._hexdump_desc = [
         #     "RDHv{version} fee={fee}",
@@ -111,63 +113,6 @@ class RawDataHeader(BaseHeader):
         #     "", "", "", "", 
         #     "", "", "", ""]
 
-
-
-# class RawDataHeader(BaseHeader):
-#     """ RDH v6 
-        
-#     https: // gitlab.cern.ch/AliceO2Group/wp6-doc/-/blob/master/rdh/RDHv6.md"""
-
-#     header_size=0x40
-
-#     def __init__(self, data, addr):
-#         # if not isinstance(rawdata, np.ndarray) or len(rawdata) != 16:
-#         if not isinstance(data, bytes) or len(data) != 0x40:
-#             raise TypeError(f"Invalid DataHeader raw data format {type(data)} {len(data)}")
-
-#         self.parse(data)
-#         self.log(data, addr)
-
-#     def parse(self, data):
-#         fieldinfo = dict(
-#             version="B", hdrsize="B", fee_id="H",
-#             prio="B", src_id="B", reserved_0="H",
-#             offset="H", datasize="H",
-#             link="B", count="B", cru_ep="H")
-
-#         fielddata = unpack("<" + "".join(fieldinfo.values()), data[0:16])
-#         for k,v in zip(fieldinfo.keys(), fielddata):
-#             if k.startswith("reserved_"):
-#                 next
-#             elif k=="cru_ep":
-#                 # possible improvement: decode CRU and endpoint (EP)
-#                 next
-#             else:
-#                 setattr(self,k,v)
-
-#         self.payload_size = self.datasize - self.header_size
-
-#         if self.src_id == 4:
-#             self.id_desc = f"TRD-{self.fee_id:04d}"
-#         else:
-#             self.id_desc = f"SRC={self.src_id} FEE={self.fee_id}"
-
-#     def log(self, data, addr):
-
-#         for i, dw in enumerate(unpack("<16L", data)):
-#             hl = 'h' if i % 2 else 'l'
-#             logging.getLogger("raw.rdh").info(
-#                 f"{addr+4*i:012X} {dw:08X}    RDH[{i//2}{hl}]  "
-#                 + self.describe_dword(i))
-
-#     def describe_dword(self,i):
-#         dword_desc = list((
-#             "RDHv{version}({hdrsize}) bytes fee={fee_id}", 
-#             "{id_desc}", 
-#             "size={datasize}", "", "", "", "", "", "", "", "", "", "", "", "", ""
-#         ))
-
-#         return dword_desc[i].format(**vars(self))
 
 
 

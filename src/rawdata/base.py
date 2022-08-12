@@ -30,6 +30,7 @@ class BaseParser:
             f"incomplete read{len(data)} of {nbytes} bytes")
         return self.parse(data,addr)
 
+
 class DumpParser(BaseParser):
     def __init__(self, logger):
         self.logger = logger
@@ -48,6 +49,7 @@ class DumpParser(BaseParser):
 
 class BaseHeader:
     header_size = 0
+    _hexdump_fmt = ('\033[1;37;40m', '\033[0;37;100m')
 
     def __init__(self, data, addr):
         if not isinstance(data, bytes) or len(data) != self.header_size:

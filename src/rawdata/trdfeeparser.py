@@ -566,7 +566,7 @@ class TrdHalfCruHeader(BaseHeader):
 		for i in range(15):
 			self._hexdump_desc[i+1] = f"Link {i:02d}: {self.fmtlink(i)}"
 		# # self._hexdump_desc[15] = f"HCRU[3.3]  14: {self.fmtlink(14)}"
-		self._hexdump_desc = HexDump.colorize(self._hexdump_desc)
+		# self._hexdump_desc = HexDump.colorize(self._hexdump_desc)
 
 	def fmtlink(self, linkno):
 		if self.errflags[linkno] == 0:
@@ -578,6 +578,7 @@ class TrdHalfCruHeader(BaseHeader):
 
 class TrdCruParser(BaseParser):
 	def __init__(self):
+
 		# self.feeparser = DumpParser(logging.getLogger("raw.trd.fee"))
 		self.feeparser = TrdFeeParser() #(logging.getLogger("raw.trd.fee"))
 
@@ -588,12 +589,14 @@ class TrdCruParser(BaseParser):
 		self.link = None
 		self.unread = None # bytes remaining to be parse in current link
 
+
 	def read(self, stream, size):
 
 		hdump = HexDump()
 		hdump._markers[0x00000000BB88] = ["here"]
 
-		maxpos = stream.tell() + size
+		startpos = stream.tell()
+		maxpos = startpos + size
 		while stream.tell() < maxpos:
 
 			avail_bytes = maxpos - stream.tell()
@@ -639,9 +642,9 @@ class TrdCruParser(BaseParser):
 					self.link = None
 					self.unread = None
 				
-			if self.hcruheader is None:
-				logger.info(f"{maxpos - stream.tell()} padding bytes")
-				hdump.fromfile(stream, maxpos - stream.tell())
+			# if self.hcruheader is None:
+			# 	logger.info(f"{maxpos - stream.tell()} padding bytes")
+				# hdump.fromfile(stream, maxpos - stream.tell())
 				# assert(False)
 				# stream.seek(maxpos-1)
 			

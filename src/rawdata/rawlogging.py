@@ -1,6 +1,7 @@
 
 import logging
 import struct
+# from pprint import pprint
 # from termcolor import colored
 
 # https://alexandra-zaharia.github.io/posts/make-your-own-custom-color-formatter-with-python-logging/
@@ -132,17 +133,25 @@ class HexDump:
         else:
             cls._markers[addr] = [message]
 
-    def dump(self, data, addr, desc=None):
+    def dump(self, data, addr, desc=None, fmt=tuple((""))):
         for i,words in enumerate(struct.iter_unpack(self.fmtchar,data)):
             if addr+4*i in self._markers:
                 for m in self._markers[addr+4*i]:
                     self.logger.info(f"MARK: {m}")
-            self.dump_dword(addr+4*i, words[0], desc[i] if desc is not None else None)
 
-    def dump_dword(self, addr, word, desc=None):
-        text = self.introfmt.format(addr=addr, word=word)
-        if desc is not None:
-            text += desc
+            if desc is None:
+                txt = ""
+            elif len(fmt) == 1:
+                txt = fmt[0] + desc[i]
+            elif len(fmt) == 2:
+                txt = (fmt[0] if i==0 else fmt[1]) + desc[i]
+            else:
+                txt = fmt[i] + desc[i]
+
+            self.dump_dword(addr+4*i, words[0], txt)
+
+    def dump_dword(self, addr, word, desc):
+        text = self.introfmt.format(addr=addr, word=word) + desc
         self.logger.info(text)
 
     def __call__(self, *args):
@@ -156,15 +165,22 @@ class HexDump:
             for i,d in enumerate(desc):
                 desc[i] += " "*(maxlen-len(d)+3)
 
-            self.dump(args[0]._data, args[0]._addr, desc)        
+            # check if we have a format (colors) for this object
+            try:
+                fmt = args[0]._hexdump_fmt
+            except AttributeError:
+                fmt = tuple([""])
+
+            # call dump() to do the work
+            self.dump(args[0]._data, args[0]._addr, desc, fmt)
         else:
             self.dump_dword(*args)
 
 
-    def colorize(fmts, first='\033[1;37;40m ', body='\033[0;37;100m '):
-        if len(fmts) >= 1:
-            fmts[0] = first + fmts[0]
-        for i,f in enumerate(fmts[1:]):
-            fmts[i+1] = body + f
-        return fmts
+    # def colorize(fmts, first='\033[1;37;40m ', body='\033[0;37;100m '):
+    #     if len(fmts) >= 1:
+    #         fmts[0] = first + fmts[0]
+    #     for i,f in enumerate(fmts[1:]):
+    #         fmts[i+1] = body + f
+    #     return fmts
 
