@@ -17,6 +17,7 @@ from .rawlogging import ColorFormatter, HexDump
 from .o32reader import o32reader
 from .tfreader import TimeFrameReader, RdhStreamParser
 from .zmqreader import zmqreader
+from .minidaqreader import MiniDaqReader
 
 class StdoutHandler(logging.StreamHandler):
 
@@ -84,6 +85,11 @@ def evdump(source, loglevel, suppress, quiet, skip_events):
         rdhparser = RdhStreamParser(payloadparser)
         reader.parsers['TRD'] = rdhparser
 
+
+    elif source.endswith('data'):
+        reader = MiniDaqReader(source)
+        payloadparser = TrdFeeParser()
+        reader.parsers[0x10] = payloadparser
 
     elif source.startswith('tcp://'):
         reader = zmqreader(source)
