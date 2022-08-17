@@ -89,6 +89,7 @@ def evdump(source, loglevel, suppress, quiet, skip_events, tracklet_format):
 
     elif source.endswith('.bin'):
         reader = MiniDaqReader(source)
+        reader.hexdump = hdump
         payloadparser = TrdFeeParser(tracklet_format=tracklet_format)
         reader.parsers[0x10] = payloadparser
 

@@ -2,19 +2,44 @@
 #
 
 import logging
-from sqlite3 import DataError
-import numpy as np
-from struct import unpack
+import time
 
 from .rawlogging import AddLocationFilter, HexDump
-from .base import BaseParser, BaseHeader
+from .base import BaseHeader
 from .bitstruct import BitStruct
-from .header import TrdboxHeader
 
 logger = logging.getLogger(__name__)
 logflt = AddLocationFilter()
 logger.addFilter(logflt)
 
+@BitStruct( # each line corresponds to a 64-bit word
+    magic=32, # word0
+    equipment_type=8, equipment_id=8, res0=8, version=8, # word1
+    res1=8, hdrsize=8, datasize=16, # word2
+    sec=32, nanosec=32) # word3, word4
+class MiniDaqHeader(BaseHeader):
+
+    def __init__(self, data, addr):
+
+        super().__init__(data,addr)
+
+        # parse the time information
+        if self.version in [1]:
+            # ( sec, ns ) = unpack("II",data[12:20])
+            self.timestamp = float(self.sec) + float(self.nanosec)*1e-9
+            self.time = time.ctime(self.timestamp)
+
+    def equipment(self):
+        return self.equipment_type<<8 | self.equipment_id
+
+    # hexdump formatting info
+
+    _hexdump_desc = [ "MiniDAQ magic word {magic}", 
+        "equipment {equipment_type:02X}:{equipment_id:02X} header version v{version}",
+        "hdr:{hdrsize} bytes  payload: {datasize}=0x{datasize:04X} bytes",
+        "{time}", "" ]
+
+    _hexdump_fmt = ('\033[1;37;40m', '\033[0;37;100m')
 
 
 
@@ -26,8 +51,7 @@ class MiniDaqReader:
     def __init__(self, filename):
         self.file = open(filename,"rb")
         self.parsers = dict()
-        # self.log_header = lambda x: x.hexdump()
-        # self._skipped_stf = dict()
+        self.hexdump = lambda x: None # Default: no logging
 
     def process(self, skip_events=0):
         while self.file.readable():
@@ -35,25 +59,14 @@ class MiniDaqReader:
             data = self.file.read(20)
             if len(data)==0:
                 break
-            hdr = TrdboxHeader(data)
-            self.log_header(hdr)
+            hdr = MiniDaqHeader(data, addr)
+            self.hexdump(hdr)
 
             if hdr.equipment_type in self.parsers:
-                self.parsers[hdr.equipment_type].read(self.file, hdr.payload_size)
-
+                self.parsers[hdr.equipment_type].read(self.file, hdr.datasize)
             else:
                 self.file.seek(hdr.payload_size, 1)  # skip over payload
-        #self.log_skipped_stf()
 
-    def log_header(self, hdr):
-        logging.getLogger("raw.o2h").info(hdr)
-
-    def log_skipped_stf(self):
-        if len(self._skipped_stf) > 0:
-            msg = "... skipped STFs: "
-            for key,count in self._skipped_stf.items():
-                msg += f" {key}({count})"
-            logging.getLogger("raw.o2h").info(msg)
 
 
 
