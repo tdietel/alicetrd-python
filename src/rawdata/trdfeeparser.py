@@ -8,7 +8,7 @@ import logging
 from rawdata.tfreader import RawDataHeader
 
 from .rawlogging import AddLocationFilter, HexDump
-from .constants import eodmarker,eotmarker,magicmarker
+from .constants import eodmarker,eotmarker
 from .base import BaseHeader, BaseParser, DumpParser
 from .bitstruct import BitStruct
 
@@ -217,6 +217,12 @@ class parse_tracklet_word:
 		self.pid |= fields.p
 		hexdump(ctx.current_linkpos, dword, f"        y={fields.y} dy={fields.d} pid={self.pid}")
 
+@decode("pppp : pppp : zzzz : dddd : dddy : yyyy : yyyy : yyyy")
+@describe("TRKL row={z} pos={y} slope={d} pid={p}")
+def parse_legacy_tracklet(ctx, dword, fields):
+	assert(dword != eotmarker)
+	return dict(readlist=[[parse_legacy_tracklet, parse_eot]])
+
 
 # ------------------------------------------------------------------------
 # Half-chamber headers
@@ -382,11 +388,20 @@ class parse_adcdata:
 class TrdFeeParser:
 
 	#Defining the initial variables for class
-	def __init__(self, store_digits = None):
+	def __init__(self, store_digits = None, tracklet_format = "run3"):
 		self.ctx = ParsingContext
 		self.ctx.event = 0
 		self.ctx.store_digits = store_digits
 		self.readlist = None
+
+		if tracklet_format == "run3":
+			self.readlist_start = [ list([parse_tracklet_hc_header, parse_eot]) ]
+		elif tracklet_format == "run2":
+			self.readlist_start = [ list([parse_legacy_tracklet, parse_eot]) ]
+		elif tracklet_format == "auto":
+			self.readlist_start = [ list([parse_tracklet_hc_header, parse_legacy_tracklet, parse_eot]) ]
+		else:
+			raise ValueError(f"Invalid tracklet format '{tracklet_format}'")
 
 	def next_event(self):
 		self.ctx.event += 1
@@ -398,10 +413,11 @@ class TrdFeeParser:
         '''
 
 		self.ctx.current_linkpos = linkpos
-
-		self.readlist = [ list([parse_tracklet_hc_header, parse_eot]) ]
+		self.reset()
 		self.process_linkdata(linkdata)
 
+	def reset(self):
+		self.readlist = self.readlist_start
 
 	def process_linkdata(self, linkdata):
 
@@ -451,9 +467,6 @@ class TrdFeeParser:
 			except IndexError:
 				logger.error(logflt.where + "extra data after end of readlist")
 				break
-
-	def reset(self):
-		self.readlist = [list([parse_tracklet_hc_header, parse_eot])]
 
 	def read(self, stream, size):
 

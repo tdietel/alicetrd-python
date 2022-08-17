@@ -45,7 +45,8 @@ class StdoutHandler(logging.StreamHandler):
 @click.option('-s', '--suppress', multiple=True)
 @click.option('-q', '--quiet', count=True)
 @click.option('-k', '--skip-events', default=0)
-def evdump(source, loglevel, suppress, quiet, skip_events):
+@click.option('-t', '--tracklet-format', default="run3")
+def evdump(source, loglevel, suppress, quiet, skip_events, tracklet_format):
 
     lh = StdoutHandler()
     logging.basicConfig(level=loglevel, handlers=[lh])
@@ -86,9 +87,9 @@ def evdump(source, loglevel, suppress, quiet, skip_events):
         reader.parsers['TRD'] = rdhparser
 
 
-    elif source.endswith('data'):
+    elif source.endswith('.bin'):
         reader = MiniDaqReader(source)
-        payloadparser = TrdFeeParser()
+        payloadparser = TrdFeeParser(tracklet_format=tracklet_format)
         reader.parsers[0x10] = payloadparser
 
     elif source.startswith('tcp://'):
