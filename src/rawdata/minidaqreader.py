@@ -34,7 +34,7 @@ class MiniDaqHeader(BaseHeader):
 
     # hexdump formatting info
 
-    _hexdump_desc = [ "MiniDAQ magic word {magic}", 
+    _hexdump_desc = [ "MiniDAQ magic word 0x{magic:08x}", 
         "equipment {equipment_type:02X}:{equipment_id:02X} header version v{version}",
         "hdr:{hdrsize} bytes  payload: {datasize}=0x{datasize:04X} bytes",
         "{time}", "" ]
