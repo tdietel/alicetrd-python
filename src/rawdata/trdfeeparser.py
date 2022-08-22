@@ -417,7 +417,8 @@ class TrdFeeParser:
 		self.process_linkdata(linkdata)
 
 	def reset(self):
-		self.readlist = self.readlist_start
+		self.readlist = self.readlist_start.copy()
+		# logger.info(f"{self.readlist}")
 
 	def process_linkdata(self, linkdata):
 
