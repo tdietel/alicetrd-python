@@ -9,3 +9,5 @@ __pycache__
 *.o32
 *.o32.gz
 *.o32.bz2
+
+data.bin
