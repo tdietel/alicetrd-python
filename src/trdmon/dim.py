@@ -5,14 +5,18 @@ import logging
 import trdmon.dimwid as dimwid
 
 class servers(urwid.Pile):
-    def __init__(self):
+    def __init__(self, servers):
 
-        self.servers = OrderedDict(
-          ztt_dimfed_server = dict(display='ICL'),
-          # trdbox =  dict(display='TRDbox'),
-          ArdPower =  dict(display='Power'),
-          HV =  dict(display='HV'),
-        )
+        # self.servers = OrderedDict(
+        #   ztt_dimfed_server = dict(display='ICL'),
+        #   # trdbox =  dict(display='TRDbox'),
+        #   ArdPower =  dict(display='Power'),
+        #   HV =  dict(display='HV'),
+        # )
+
+        self.servers = dict()
+        for dimname,disp in servers.items():
+            self.servers[dimname] = dict(display=disp)
 
         # create a widget for each DIM server
         for s in self.servers.values():
