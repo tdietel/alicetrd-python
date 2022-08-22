@@ -13,9 +13,9 @@ from typing import NamedTuple
 from datetime import datetime
 
 from .header import TrdboxHeader
-from .linkparser import LinkParser, logflt
-from .logging import ColorFormatter
-from .logging import AddLocationFilter
+# from .trdfeeparser import TrdFeeParser, logflt
+# from .rawlogging import ColorFormatter
+# from .rawlogging import AddLocationFilter
 
 # create logger with 'spam_application'
 logger = logging.getLogger(__name__)

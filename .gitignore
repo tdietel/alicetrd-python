@@ -1,7 +1,7 @@
 __pycache__
 /venv
 /dist
-/src/pytrd_tdietel.egg-info
+/src/*.egg-info
 
 /obsolete
 /digits*.csv

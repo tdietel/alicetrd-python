@@ -2,12 +2,10 @@
 
 import click
 import logging
-import itertools
-# from pprint import pprint
 
 from .header import TrdboxHeader
-from .linkparser import LinkParser, logflt
-from .logging import ColorFormatter
+# from .trdfeeparser import TrdFeeParser, logflt
+from .rawlogging import ColorFormatter
 from .o32reader import o32reader
 from .zmqreader import zmqreader
 

@@ -3,7 +3,7 @@
 # from . import start as start_loop
 
 from . import dimwid
-from . import trdbox
+# from . import trdbox
 from . import roc
 from . import dim
 
@@ -11,12 +11,14 @@ import logging
 import urwid
 import os
 import pwd
+import asyncio
 
-
+from collections import OrderedDict
 
 # ===========================================================================
 
 def cli():
+
 
     # set up logging to /tmp/trdmon-{username}.log
     username = pwd.getpwuid( os.getuid() )[ 0 ]
@@ -26,30 +28,28 @@ def cli():
     logger=logging.getLogger(__name__)
 
 
-    palette = [
-        ('state', 'light green', 'black'),
+    # ----------------------------------------------------------------
+    # create widgets
+    # ----------------------------------------------------------------
 
-        ('fsm:off',     'dark gray',  'black'),
-        ('fsm:static',  'light blue', 'black'),
-        ('fsm:ready',   'light green', 'black'),
-        ('fsm:trans',   'yellow',     'black'),
-        ('fsm:error',   'white',      'light red'),
-
-        ('bg', 'light gray', 'black'),
-        ('foo', 'light red', 'black'),
-    ]
+    # widget to monitor DIM servers
+    dimservers = urwid.LineBox(dim.servers(OrderedDict(
+        ztt_dimfed_server='ICL', trdbox='TRDbox', ArdPower='PWR')))
 
 
-
+    # ----------------------------------------------------------------
+    # create layout
+    # ----------------------------------------------------------------
 
     top_widget = urwid.Frame(
         header=urwid.Text(("bg", "HEADER")),
         body =
         urwid.AttrMap(urwid.Filler(urwid.Pile([
-            urwid.LineBox(trdbox.daq()),
-            urwid.LineBox(trdbox.trigger()),
+            # urwid.LineBox(trdbox.daq()),
+            # urwid.LineBox(trdbox.trigger()),
             urwid.LineBox(roc.info(0,2,0)),
-            urwid.LineBox(dim.servers()),
+            # urwid.LineBox(dim.servers(dimservers)),
+            dimservers,
         ])), 'bg'),
         focus_part='header')
 
@@ -77,4 +77,4 @@ def cli():
     #     focus_part='header')
 
 
-    dimwid.start(top_widget, palette)
+    dimwid.run(top_widget)
