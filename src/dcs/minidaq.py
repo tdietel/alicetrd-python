@@ -3,6 +3,8 @@ import click
 import zmq
 import struct
 from time import sleep, time
+import oscilloscopeRead.scopeRead as scopeRead
+
 
 class zmq_env:
     def __init__(self):
@@ -51,6 +53,10 @@ def gen_event_header(payloadsize):
 @minidaq.command()
 @click.pass_context
 def readevent(ctx, nevents=2):
+
+    scopeInterface = scopeRead.interfaceName()
+
+    scopeReader = scopeRead.Reader(scopeInterface)
 
     outfile = open("data.bin", "wb")
 

@@ -10,6 +10,8 @@ The details of what these commands do can be found in the Programming Manual in 
 import oscilloscopeRead.dso1kb as dso1kb
 import numpy as np
 import matplotlib.pyplot as plt
+import os
+import re
 
 class Reader:
     """
@@ -94,6 +96,11 @@ class Reader:
         # requires a screenshots folder in the outer directory
         plt.savefig(f'oscilloscopeRead/screenshots/{saveName}.png')
 
+
+    def getInterfaceName(self):
+        interfaceName = re.findall("ttyACM.{1}", os.popen("dmesg | grep ttyACM").read().split('\n')[-2])[0]
+
+        return interfaceName
 # if __name__ == "__main__":
 #     devstr = str(input('Enter the device name: '))
 #     scope = reader(devstr)
