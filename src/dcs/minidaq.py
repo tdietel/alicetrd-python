@@ -54,7 +54,7 @@ def gen_event_header(payloadsize):
 @click.pass_context
 def readevent(ctx, nevents=2):
 
-    scopeInterface = scopeRead.interfaceName()
+    scopeInterface = scopeRead.getInterfaceName()
 
     scopeReader = scopeRead.Reader(scopeInterface)
 

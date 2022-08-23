@@ -97,10 +97,10 @@ class Reader:
         plt.savefig(f'oscilloscopeRead/screenshots/{saveName}.png')
 
 
-    def getInterfaceName(self):
-        interfaceName = re.findall("ttyACM.{1}", os.popen("dmesg | grep ttyACM").read().split('\n')[-2])[0]
+def getInterfaceName():
+    interfaceName = re.findall("ttyACM.{1}", os.popen("dmesg | grep ttyACM").read().split('\n')[-2])[0]
 
-        return interfaceName
+    return interfaceName
 # if __name__ == "__main__":
 #     devstr = str(input('Enter the device name: '))
 #     scope = reader(devstr)
