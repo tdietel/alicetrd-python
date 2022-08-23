@@ -15,9 +15,9 @@ This package uses setuptools. For now, I suggest to install it in a virtual envi
 ```
 python3 -m venv venv
 . venv/bin/activate
-python -m pip install upgrade pip
-python -m pip install -r requirements.txt
-python -m install -e .
+pip install upgrade pip
+pip install -r requirements.txt
+pip install -e .
 ```
 
 Once installed, activate the environment with `. path/to/pytrd/venv/bin/activate`, add `venv/bin` to the path, or run the commands with the full path `path/to/pytrd/venv/bin/trdmon`.
