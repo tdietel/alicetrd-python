@@ -109,6 +109,7 @@ class Dso:
         global inBuffer
         self.ver = __version__ #Driver version.
         self.iWave = [[], [], [], []]
+        self.byteData = [[], [], [], []]
         self.vdiv = [[], [], [], []]
         self.vunit = [[], [], [], []]
         self.dt = [[], [], [], []]
@@ -248,7 +249,8 @@ class Dso:
         if (self.checkAcqState(ch)==-1):
             return
         self.write(f':ACQ{ch}:MEM?\n') # Requests the raw data from the scope
-        index = len(self.ch_list)
+        # index = len(self.ch_list)
+        index = ch - 1
         if (header_on == True):
             if (index == 0):
                 self.info=[[], [], [], []]
@@ -284,12 +286,29 @@ class Dso:
         else:
             dataS = self.read()
         
+        print(self.info[index])
+        
         ## Note the various uses of a *2 or a /2 here, it really is weird when dealing with byte arrays filled with hex values. the lengths of arrays are really weird but I think this works
         dataInfoHeader = dataS[:2]
         dataInfo = int(dataInfoHeader.decode()[1])
         pointsByte = dataS[2:2+dataInfo]
         self.points_num = int(int(pointsByte.decode())/2)
         dataS = dataS[2+dataInfo:-1] # Needs the -1 at the end to exclude the \n.
+
+        print(len(dataS))
+        print(self.points_num)
+        # while len(dataS) != self.points_num:
+        #     data += self.read()[:-1]
+
+        if len(dataS) != 2 * self.points_num:
+            extras = self.IO.readlines()
+            for extra in extras:
+                dataS += extra.strip(b'\n')
+                dataS += b'\x00'
+            
+
+        print(len(dataS))
+        self.byteData[index].append(dataS)
 
         try:
             self.iWave[index] = unpack(f'>{self.points_num}h', dataS)
@@ -338,7 +357,7 @@ class Dso:
             # f.write(str(fWave))
             # f.close()
 
-        else: #Reduced to helf points.
+        else: #Reduced to half points.
             num = self.points_num/factor
             fWave = [0]*num
             for x in range(num): # Converts 16 bits signed to floating point number.
@@ -478,6 +497,22 @@ class Dso:
     
     def readlines(self):
         null = self.readlines()
+
+    def getByteData(self, channels):
+        """
+        Returns the data from each channel, as bytes, with a small header in front of each channel output containing the things needed to convert from bytes to floats of voltages
+        """
+        out = b''
+        for chan in channels:
+            chPos = chan-1
+            dv = self.vdiv[chPos]/25
+            payloadSize = self.points_num
+            head = struct.pack('<LdL', 0xDA7AFEED, dv, payloadSize)
+            out += head + self.byteData[chPos][0]
+        
+        return out
+
+
 
 
 def getInterfaceName():

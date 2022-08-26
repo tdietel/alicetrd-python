@@ -20,6 +20,9 @@ class zmq_env:
         self.sfp1 = self.context.socket(zmq.REQ)
         self.sfp1.connect('tcp://localhost:7751')
 
+        self.dso0 = self.context.socket(zmq.REQ)
+        self.dso0.connect('tcp://localhost:7740')
+
 
 @click.group()
 @click.pass_context
@@ -54,10 +57,6 @@ def gen_event_header(payloadsize):
 @click.pass_context
 def readevent(ctx, nevents=2):
 
-    scopeInterface = scopeRead.getInterfaceName()
-
-    scopeReader = scopeRead.Reader(scopeInterface)
-
     outfile = open("data.bin", "wb")
 
     for ievent in range(nevents):
@@ -75,7 +74,7 @@ def readevent(ctx, nevents=2):
         # readout
 
         # define the equipments that should be read out
-        eqlist = [ctx.obj.sfp1, ctx.obj.sfp0]
+        eqlist = [ctx.obj.sfp1, ctx.obj.sfp0, ctx.obj.dso0]
 
         # send query for data to all equipments
         for eq in eqlist:
