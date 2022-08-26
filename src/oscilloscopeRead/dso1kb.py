@@ -61,7 +61,7 @@ from PIL import Image
 from struct import unpack
 import struct
 import numpy as np
-import io, os, sys, time, platform
+import io, os, sys, time, platform, re
 
 __version__ = "1.01" #dso1kb module's version.
 
@@ -71,7 +71,7 @@ sModelList = [['GDS-1072B','DCS-1072B','IDS-1072B','GDS-71072B','GDS-1072R','DSO
              'GDS-1074B','DCS-1074B','IDS-1074B','GDS-71074B','GDS-1074R','DSO-1072D',
              'GDS-1104B','DCS-1104B','IDS-1104B','GDS-71104B','GDS-1104R','DSO-1102D']]
 
-def genereate_lut():
+def generate_lut():
     global lu_table
     num = 65536
     lu_table = []
@@ -116,7 +116,7 @@ class Dso:
         self.hpos = [[], [], [], []]
         self.ch_list = []
         self.info = [[], [], [], []]
-        genereate_lut()
+        generate_lut()
     
     def connect(self, dev):
         if (dev.count('.') == 3 and dev.count(':') == 1): # Checks if dev is an ip address or not
@@ -478,3 +478,9 @@ class Dso:
     
     def readlines(self):
         null = self.readlines()
+
+
+def getInterfaceName():
+    interfaceName = re.findall("ttyACM.{1}", os.popen("dmesg | grep ttyACM").read().split('\n')[-2])[0]
+
+    return interfaceName
