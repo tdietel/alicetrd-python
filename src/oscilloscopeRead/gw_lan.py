@@ -70,6 +70,13 @@ class lan:
             # if(a==b'\n'):
         return line_buf
 
+    def readlines(self):
+        try:
+            return self.IO.recv()
+        except socket.error as e:
+            print ("readlines(), %s" % e)
+            return ''
+
     def readBytes(self, length):
         str=''
         try:

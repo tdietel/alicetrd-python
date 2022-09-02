@@ -23,6 +23,9 @@ while True:
         dso.getRawData(True, 2)
         dso.getRawData(True, 4)
 
-        socket.send(dso.getByteData([1, 2, 4]))
+        to_send = dso.getByteData([1, 2, 4])
+        print(len(to_send))
+
+        socket.send(to_send)
 
         dso.resetChList()

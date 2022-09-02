@@ -264,7 +264,9 @@ class Dso:
             # dataS = bArrSplit[1]
 
             self.info[index] = self.read().decode('ascii').split(';')
-            dataS = self.read()
+            memLength = int(self.info[index][1].split(',')[1])
+            dataS = self.readBytes(2 + len(str(memLength)) + 2*memLength + 1)
+            # dataS = self.read()
             num = len(self.info[index])
             # print(f'Number of elements in the header: {num}')
 
@@ -286,7 +288,7 @@ class Dso:
         else:
             dataS = self.read()
         
-        print(self.info[index])
+        # print(self.info[index])
         
         ## Note the various uses of a *2 or a /2 here, it really is weird when dealing with byte arrays filled with hex values. the lengths of arrays are really weird but I think this works
         dataInfoHeader = dataS[:2]
@@ -295,19 +297,15 @@ class Dso:
         self.points_num = int(int(pointsByte.decode())/2)
         dataS = dataS[2+dataInfo:-1] # Needs the -1 at the end to exclude the \n.
 
-        print(len(dataS))
-        print(self.points_num)
-        # while len(dataS) != self.points_num:
-        #     data += self.read()[:-1]
-
-        if len(dataS) != 2 * self.points_num:
-            extras = self.IO.readlines()
-            for extra in extras:
-                dataS += extra.strip(b'\n')
-                dataS += b'\x00'
+        # if len(dataS) != 2 * self.points_num:
+        #     print('dataS not as long as it should be')
+        #     extras = self.IO.readlines()
+        #     for extra in extras:
+        #         dataS += extra.strip(b'\n')
+        #         dataS += b'\x00'
             
 
-        print(len(dataS))
+        # print(len(dataS))
         self.byteData[index].append(dataS)
 
         try:

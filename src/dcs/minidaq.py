@@ -54,8 +54,9 @@ def gen_event_header(payloadsize):
     )
 
 @minidaq.command()
+@click.option('--nevents','-n', default=1, help='Number of triggered events you want to read.')
 @click.pass_context
-def readevent(ctx, nevents=2):
+def readevent(ctx, nevents):
 
     outfile = open("data.bin", "wb")
 
@@ -89,6 +90,7 @@ def readevent(ctx, nevents=2):
         evdata = gen_event_header(payloadsize = sum(len(i) for i in data))
         for segment in data:
             evdata += segment
+            print(len(evdata))
             # print(len(segment),outfile.tell())
 
         outfile.write(evdata)
