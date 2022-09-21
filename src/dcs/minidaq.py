@@ -3,7 +3,6 @@ import click
 import zmq
 import struct
 from time import sleep, time
-import oscilloscopeRead.scopeRead as scopeRead
 
 
 class zmq_env:
@@ -56,7 +55,7 @@ def gen_event_header(payloadsize):
 @minidaq.command()
 @click.option('--nevents','-n', default=1, help='Number of triggered events you want to read.')
 @click.pass_context
-def readevent(ctx, nevents):
+def readevent(ctx, nevents=2):
 
     outfile = open("data.bin", "wb")
 
@@ -90,7 +89,6 @@ def readevent(ctx, nevents):
         evdata = gen_event_header(payloadsize = sum(len(i) for i in data))
         for segment in data:
             evdata += segment
-            print(len(evdata))
             # print(len(segment),outfile.tell())
 
         outfile.write(evdata)
