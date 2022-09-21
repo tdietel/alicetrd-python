@@ -265,7 +265,7 @@ class Dso:
 
             self.info[index] = self.read().decode('ascii').split(';')
             memLength = int(self.info[index][1].split(',')[1])
-            dataS = self.readBytes(2 + len(str(memLength)) + 2*memLength + 1)
+            dataS = self.readBytes(2 + len(str(memLength)) + 2*memLength + 1)   # This frankenstein is needed to deal with an issue the scope has. I think this is robust
             # dataS = self.read()
             num = len(self.info[index])
             # print(f'Number of elements in the header: {num}')
@@ -297,23 +297,12 @@ class Dso:
         self.points_num = int(int(pointsByte.decode())/2)
         dataS = dataS[2+dataInfo:-1] # Needs the -1 at the end to exclude the \n.
 
-        # if len(dataS) != 2 * self.points_num:
-        #     print('dataS not as long as it should be')
-        #     extras = self.IO.readlines()
-        #     for extra in extras:
-        #         dataS += extra.strip(b'\n')
-        #         dataS += b'\x00'
-            
-
         # print(len(dataS))
         self.byteData[index].append(dataS)
 
         try:
             self.iWave[index] = unpack(f'>{self.points_num}h', dataS)
         except:
-            """
-            This is an area that definitely can be improved. I ran into the issue of the scope occasionally outputting bad data that is split up by \n, so the read() function only gets part of it. I think there must be some way to get each section of the data and put it all together, but it wasn't working for me. It currently just gives zeros, so it can be easily ignored in analysis, but fixing this would be a great help.
-            """
             # print('Buffer wrong size, setting all to zero')
             self.clearBuf()
             tempArr = bytearray(int(self.points_num*2))
@@ -517,3 +506,24 @@ def getInterfaceName():
     interfaceName = re.findall("ttyACM.{1}", os.popen("dmesg | grep ttyACM").read().split('\n')[-2])[0]
 
     return interfaceName
+
+def convertByteData(byteArr):
+        # print(self.vdiv)
+        # print('DV', dv)
+        byteHead = byteArr[:16]
+        bytePayload = byteArr[16:]
+        datafeed, dv, payloadSize = unpack('<LdL', byteHead)
+        fromBytes = unpack(f'>{payloadSize}h', bytePayload)
+        fromBytesNp = np.array(fromBytes)
+        outputWave = fromBytesNp * dv
+
+        # num = payloadSize
+        # fWave = [0]*num
+        # for x in range(num): # Converts 16 bits signed to floating point number.
+        #     fWave[x] = float(self.iWave[chPos][x])*dv 
+
+        # f = open("dataPlottableCh%s" % ch,'w')
+        # f.write(str(fWave))
+        # f.close()
+
+        return outputWave
