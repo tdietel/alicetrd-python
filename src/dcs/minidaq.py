@@ -53,7 +53,7 @@ def gen_event_header(payloadsize):
     )
 
 @minidaq.command()
-@click.option('--nevents','-n', default=1, help='Number of triggered events you want to read.')
+@click.option('--nevents','-n', default=2, help='Number of triggered events you want to read.')
 @click.pass_context
 def readevent(ctx, nevents=2):
 
