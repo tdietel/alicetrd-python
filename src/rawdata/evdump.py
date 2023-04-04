@@ -45,7 +45,7 @@ class StdoutHandler(logging.StreamHandler):
 @click.option('-s', '--suppress', multiple=True)
 @click.option('-q', '--quiet', count=True)
 @click.option('-k', '--skip-events', default=0)
-@click.option('-t', '--tracklet-format', default="run3")
+@click.option('-t', '--tracklet-format', default="auto")
 def evdump(source, loglevel, suppress, quiet, skip_events, tracklet_format):
 
     lh = StdoutHandler()
@@ -58,7 +58,7 @@ def evdump(source, loglevel, suppress, quiet, skip_events, tracklet_format):
 
     # The parsing of TRD FEE data will be handled by the TrdFeeParser
     # At this point, we can add options to tune it's behaviour
-    lp = TrdFeeParser()
+    trdfeeparser = TrdFeeParser(tracklet_format=tracklet_format)
     # lp.set_skip_events(skip_events)
 
     hdump = HexDump()
@@ -66,7 +66,7 @@ def evdump(source, loglevel, suppress, quiet, skip_events, tracklet_format):
     # Instantiate the reader that will get events and subevents from the source
     if source.endswith(".o32") or source.endswith(".o32.bz2"):
         reader = o32reader(source)
-        reader.set_trd_fee_parser(lp)
+        reader.set_trd_fee_parser(trdfeeparser)
 
     elif source.endswith(".tf"):
         reader = TimeFrameReader(source)
@@ -90,8 +90,7 @@ def evdump(source, loglevel, suppress, quiet, skip_events, tracklet_format):
     elif source.endswith('.bin'):
         reader = MiniDaqReader(source)
         reader.hexdump = hdump
-        payloadparser = TrdFeeParser(tracklet_format=tracklet_format)
-        reader.parsers[0x10] = payloadparser
+        reader.parsers[0x10] = trdfeeparser
 
     elif source.startswith('tcp://'):
         reader = zmqreader(source)

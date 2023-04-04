@@ -134,7 +134,7 @@ class o32reader:
 
     def read_subevent(self):
 
-        subevent = dict()
+        # subevent = dict()
 
         if self.read_line() != '## DATA SEGMENT':
             raise Exception('file format', 'invalid file format')

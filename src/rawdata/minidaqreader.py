@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 logflt = AddLocationFilter()
 logger.addFilter(logflt)
 
-@BitStruct( # each line corresponds to a 64-bit word
+@BitStruct( # each line corresponds to a 32-bit word
     magic=32, # word0
     equipment_type=8, equipment_id=8, res0=8, version=8, # word1
     res1=8, hdrsize=8, datasize=16, # word2

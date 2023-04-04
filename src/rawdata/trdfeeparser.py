@@ -455,8 +455,7 @@ class TrdFeeParser:
 					break
 
 				else:
-					logger.error(logflt.where 
-						+ "NO MATCH - expected {expected}")
+					logger.error(logflt.where + f"NO MATCH - expected {expected}")
 					# check_dword(dword)
 
 					# skip everything until EOD
