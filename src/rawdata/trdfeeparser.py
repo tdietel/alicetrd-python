@@ -4,19 +4,38 @@ from struct import unpack
 from functools import wraps
 from collections import namedtuple
 import logging
+from termcolor import colored
 
 from rawdata.tfreader import RawDataHeader
 
-from .rawlogging import AddLocationFilter, HexDump
+from .rawlogging import TermColorFilter
 from .constants import eodmarker,eotmarker
 from .base import BaseHeader, BaseParser, DumpParser
 from .bitstruct import BitStruct
 
-logger = logging.getLogger(__name__)
-logflt = AddLocationFilter()
-logger.addFilter(logflt)
+# logger = logging.getLogger(__name__)
+logger = logging.getLogger("rawlog")
 
-hexdump = HexDump()
+logger.getChild("trkl.TKH").addFilter(TermColorFilter("bold_green"))
+logger.getChild("trkl.TKD").addFilter(TermColorFilter("green"))
+logger.getChild("trkl.TKL").addFilter(TermColorFilter("green"))
+logger.getChild("trkl.EOT").addFilter(TermColorFilter("green"))
+
+logger.getChild("hc.HC0").addFilter(TermColorFilter("white_on_blue"))
+logger.getChild("hc.HC1").addFilter(TermColorFilter("white_on_blue"))
+logger.getChild("hc.HC2").addFilter(TermColorFilter("white_on_blue"))
+logger.getChild("hc.HC3").addFilter(TermColorFilter("white_on_blue"))
+
+logger.getChild("mcm.MCM").addFilter(TermColorFilter("bold_blue"))
+logger.getChild("mcm.MSK").addFilter(TermColorFilter("blue"))
+logger.getChild("mcm.ADC").addFilter(TermColorFilter("grey"))
+logger.getChild("mcm.EOD").addFilter(TermColorFilter("bold_blue"))
+
+
+# logflt = AddLocationFilter()
+# logger.addFilter(logflt)
+# logger.getChild("marker.EOT").addFilter(logflt)
+# hexdump = HexDump()
 
 
 class decode:
@@ -91,7 +110,8 @@ class describe:
 	Probably this function is overkill and should be replaced with a single
 	log statement in the decorated functions."""
 
-	def __init__(self, fmt):
+	def __init__(self, stream, fmt):
+		self.logger = logger.getChild(stream)
 		self.format = fmt
 		self.marker = ('#', '#', '|', ':')
 
@@ -114,9 +134,10 @@ class describe:
 			if 'description' not in retval:
 				# if (dword & 0x3) == 2:
 				# mrk = ('#', '#', '|', ':')[dword&0x3]
-				logger.info(self.format.format(
+				self.logger.info(self.format.format(
 					dword=dword, mark=self.marker[dword & 0x3],
-					**fielddata, ctx=ctx))
+					**fielddata, ctx=ctx),
+					extra=dict(hexdata=dword, hexaddr=ctx.current_linkpos))
 				# retval['description'] = msg
 
 			return retval
@@ -137,12 +158,12 @@ ParsingContext = namedtuple('ParsingContext', [
 # ------------------------------------------------------------------------
 # Generic dwords
 
-@describe("SKP ... skip parsing ...")
+@describe("SKP", "... skip parsing ...")
 def skip_until_eod(ctx, dword):
 	assert(dword != eodmarker)
 	return dict(readlist=[[parse_eod, skip_until_eod]])
 
-@describe("SKP {mark} ... trying to find: eod | mcmhdr - {dword:X}")
+@describe("SKP", "{mark} ... trying to find: eod | mcmhdr - {dword:X}")
 def find_eod_mcmhdr(ctx, dword):
 
 	if dword == eodmarker:
@@ -156,17 +177,19 @@ def find_eod_mcmhdr(ctx, dword):
 
 def parse_eot(ctx, dword):
 	assert(dword == eotmarker)
-	hexdump(ctx.current_linkpos, dword, "EOT - end of tracklets")
+	logger.getChild("trkl.EOT").info("end of tracklets", extra=dict(hexdata=dword, hexaddr=ctx.current_linkpos))
 	return dict(readlist=[[parse_eot, parse_cru_padding, parse_hc0]])
 
 def parse_eod(ctx, dword):
 	assert(dword == eodmarker)
-	hexdump(ctx.current_linkpos, dword, "EOD - end of raw data")
+	logger.getChild("mcm.EOD").info("end of data",
+                                  extra=dict(hexdata=dword, hexaddr=ctx.current_linkpos))
 	return dict(readlist=[[parse_eod, parse_cru_padding]])
 
 def parse_cru_padding(ctx, dword):
 	assert(dword == 0xEEEEEEEE)
-	hexdump(ctx.current_linkpos, dword, "padding")
+	logger.getChild("cru.PAD").info("padding",
+                                 extra=dict(hexdata=dword, hexaddr=ctx.current_linkpos))
 	return dict(readlist=[[parse_cru_padding]])
 
 # ------------------------------------------------------------------------
@@ -177,7 +200,7 @@ def parse_cru_padding(ctx, dword):
 def parse_tracklet_hc_header(ctx, dword, fields):
 	hc = f"{fields.s:02}_{fields.c}_{fields.p}{'A' if fields.i==0 else 'B'}"
 	hcid = 60*fields.s + 12*fields.c + 2*fields.p + fields.i
-	hexdump(ctx.current_linkpos, dword, f"TRK HC header {hc} (hcid {hcid})")
+	logger.getChild("trap.TRK").info("HC header {hc} (hcid {hcid})")
 	return dict(readlist=[[parse_tracklet_mcm_header(hcid), parse_eot]])
 
 
@@ -191,8 +214,10 @@ class parse_tracklet_mcm_header:
 	def __call__(self, ctx, dword, fields):
 		pid = tuple((fields.a, fields.b, fields.c))
 		mcm = f"{fields.z//4 + self.hcid%2}:{4*(fields.z%4) + fields.y:02d}"
-		hexdump(ctx.current_linkpos, dword, 
-			f"    MCM {mcm} row={fields.z} col={fields.y} pid = {pid[0]} / {pid[1]} / {pid[2]}")
+
+		logger.getChild("trkl.TKD").info(
+		    f"    MCM {mcm} row={fields.z} col={fields.y} pid = {pid[0]} / {pid[1]} / {pid[2]}",
+			extra=dict(hexdata=dword, hexaddr=ctx.current_linkpos))
 
 		rl = list()
 		for p in pid:
@@ -215,10 +240,12 @@ class parse_tracklet_word:
 	@decode("yyyy : yyyY : yyyp : pppp : pppp : pppd : dddD : ddd0")
 	def __call__(self, ctx, dword, fields):
 		self.pid |= fields.p
-		hexdump(ctx.current_linkpos, dword, f"        y={fields.y} dy={fields.d} pid={self.pid}")
+		logger.getChild("trkl.TKD").info(
+			f"        y={fields.y} dy={fields.d} pid={self.pid}",
+			extra=dict(hexdata=dword, hexaddr=ctx.current_linkpos))
 
 @decode("pppp : pppp : zzzz : dddd : dddy : yyyy : yyyy : yyyy")
-@describe("TRKL row={z} pos={y} slope={d} pid={p}")
+@describe("trkl.TKL", "row={z} pos={y} slope={d} pid={p}")
 def parse_legacy_tracklet(ctx, dword, fields):
 	assert(dword != eotmarker)
 	return dict(readlist=[[parse_legacy_tracklet, parse_eot]])
@@ -228,7 +255,7 @@ def parse_legacy_tracklet(ctx, dword, fields):
 # Half-chamber headers
 
 @decode("xmmm : mmmm : nnnn : nnnq : qqss : sssp : ppcc : ci01")
-@describe("HC0 {ctx.HC} ver=0x{m:X}.{n:X} nw={q}")
+@describe("hc.HC0", "{ctx.HC} ver=0x{m:X}.{n:X} nw={q}")
 def parse_hc0(ctx, dword, fields):
 
 	ctx.major = fields.m  # (dword >> 24) & 0x7f
@@ -267,7 +294,7 @@ def parse_hc0(ctx, dword, fields):
 	return dict(readlist=readlist)
 
 @decode("tttt : ttbb : bbbb : bbbb : bbbb : bbpp : pphh : hh01")
-@describe("HC1 tb={t} bc={b} ptrg={p} phase={h}")
+@describe("hc.HC1", "tb={t} bc={b} ptrg={p} phase={h}")
 def parse_hc1(ctx, dword, fields):
 
 	ctx.ntb         = fields.t  # (dword >> 26) & 0x3f
@@ -277,12 +304,12 @@ def parse_hc1(ctx, dword, fields):
 
 
 @decode("pgtc : nbaa : aaaa : xxxx : xxxx : xxxx : xx11 : 0001")
-@describe("HC2 - filter settings")
+@describe("hc.HC2", "filter settings")
 def parse_hc2(ctx, dword, fields):
 	pass
 
 @decode("ssss : ssss : ssss : saaa : aaaa : aaaa : aa11 : 0101")
-@describe("HC3 - svn version {s} {a}")
+@describe("hc.HC3", "svn version {s} {a}")
 def parse_hc3(ctx, dword, fields):
 	pass
 
@@ -290,7 +317,7 @@ def parse_hc3(ctx, dword, fields):
 # MCM headers
 
 @decode("1rrr : mmmm : eeee : eeee : eeee : eeee : eeee : 1100")
-@describe("MCM {r}:{m:02} event {e}")
+@describe("mcm.MCM", "{r}:{m:02} event {e}")
 def parse_mcmhdr(ctx, dword, fields):
 
 	ctx.rob = fields.r
@@ -310,7 +337,7 @@ def parse_mcmhdr(ctx, dword, fields):
 
 @decode("nncc : cccm : mmmm : mmmm : mmmm : mmmm : mmmm : 1100")
 def parse_adcmask(ctx, dword, fields):
-	desc = "MSK "
+	desc = ""
 	count = 0
 	readlist = list()
 
@@ -333,9 +360,9 @@ def parse_adcmask(ctx, dword, fields):
 	readlist.append([parse_mcmhdr, parse_eod])
 	assert( count == (~fields.c & 0x1F) )
 
-	logger.info(desc)
+	logger.getChild("mcm.MSK").info(desc, 
+		extra=dict(hexdata=dword, hexaddr=ctx.current_linkpos))
 	return dict(readlist=readlist)
-	# return dict(description=desc, readlist=readlist)
 
 
 # ------------------------------------------------------------------------
@@ -362,11 +389,12 @@ class parse_adcdata:
 		z = (dword & 0x00000FFC) >>  2
 		f = (dword & 0x00000003) >>  0
 
-		msg = f"ADC {('#', '#', '|', ':')[dword&3]} "
+		msg = f"{('#', '#', '|', ':')[dword&3]} "
 		msg += f"ch {self.channel:2} " if self.timebin==0 else " "*6
 		msg += f"tb {self.timebin:2} (f={f})   {x:4}  {y:4}  {z:4}"
 
-		logger.info(msg)
+		logger.getChild("mcm.ADC").info(msg,
+                                  extra=dict(hexdata=dword, hexaddr=ctx.current_linkpos))
 
 		# assert( f == 2 if self.channel%2 else 3)
 
@@ -413,35 +441,21 @@ class TrdFeeParser:
         '''
 
 		self.ctx.current_linkpos = linkpos
-		self.reset()
-		self.process_linkdata(linkdata)
-
-	def reset(self):
-		self.readlist = self.readlist_start
-
-	def process_linkdata(self, linkdata):
+		self.readlist = self.readlist_start.copy()
+		# logger.info(f"start processing {len(linkdata)} words of link data")
 
 		for dword in linkdata:
-
 			self.ctx.current_linkpos += 1
 			self.ctx.current_dword = dword
-
-			logflt.where = f"{self.ctx.current_linkpos:12x} {dword:08x}  "
-
-			# Debugging:
-			# self.dump_readlist()
 
 			try:
 				# for fct in self.readlist[i]:
 				expected = self.readlist.pop(0)
 				for fct in expected:
-
-					# logger.info(fct)
-
 					# The function can raise an AssertionError to signal that
 					# it does not understand the dword
 					try:
-						 result = fct(self.ctx,dword)
+						result = fct(self.ctx,dword)
 
 					except AssertionError:
 						continue
@@ -455,7 +469,8 @@ class TrdFeeParser:
 					break
 
 				else:
-					logger.error(logflt.where + f"NO MATCH - expected {expected}")
+					logger.error(f"NO MATCH - expected {expected}")
+					# logger.error(logflt.where + f"NO MATCH - expected {expected}")
 					# check_dword(dword)
 
 					# skip everything until EOD
@@ -464,7 +479,7 @@ class TrdFeeParser:
 
 
 			except IndexError:
-				logger.error(logflt.where + "extra data after end of readlist")
+				logger.error("extra data after end of readlist")
 				break
 
 	def read(self, stream, size):
@@ -604,8 +619,8 @@ class TrdCruParser(BaseParser):
 
 	def read(self, stream, size):
 
-		hdump = HexDump()
-		hdump._markers[0x00000000BB88] = ["here"]
+		# hdump = HexDump()
+		# hdump._markers[0x00000000BB88] = ["here"]
 
 		startpos = stream.tell()
 		maxpos = startpos + size
@@ -621,7 +636,7 @@ class TrdCruParser(BaseParser):
 
 			if self.hcruheader is None:
 				if avail_bytes < TrdHalfCruHeader.header_size:
-					hdump.fromfile(stream, avail_bytes)
+					# hdump.fromfile(stream, avail_bytes)
 				
 					raise ValueError("Insufficient data for Half-CRU header")
 

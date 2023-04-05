@@ -4,7 +4,10 @@ import re
 import subprocess
 from datetime import datetime
 from typing import NamedTuple
+import logging
 #from collections.abc import Iterable
+
+logger = logging.getLogger("rawlog.o32")
 
 class event_t(NamedTuple):
     timestamp: datetime
@@ -39,7 +42,6 @@ class o32reader:
 
     #Initial state variables:
     def __init__(self,file_name):
-
         self.filename = file_name
         self.line_number=0
         self.linebuf = None
@@ -118,7 +120,6 @@ class o32reader:
 
             if h == 'time stamp':
                 m = re.search('# *time stamp: *(.*)', self.read_line())
-
                 hdr['time stamp'] = datetime.strptime( m.group(1),
                                                            '%Y-%m-%dT%H:%M:%S.%f')
 
@@ -134,8 +135,6 @@ class o32reader:
 
     def read_subevent(self):
 
-        # subevent = dict()
-
         if self.read_line() != '## DATA SEGMENT':
             raise Exception('file format', 'invalid file format')
 
@@ -148,13 +147,13 @@ class o32reader:
 
         payload = numpy.zeros(payload_size, dtype=numpy.uint32)
         for i in range(payload_size):
-            payload[i] = numpy.uint32(int(self.read_line(),0))
+            payload[i] = numpy.uint32(int(self.read_line(logger=None),0))
 
         return subevent_t(equipment_type, equipment_id, payload)
 
 
 
-    def read_line(self):
+    def read_line(self,logger=logger):
 
         # This function seems to support partial reading of lines, although
         # I don't remember why and how.
@@ -170,6 +169,11 @@ class o32reader:
         # subprocess pipes return bytes, need to decode to string
         if isinstance(self.lastline, bytes):
             self.lastline = self.lastline.decode()
+
+        # Let's log about this line
+        if logger is not None:
+            logger.info( f"L.{self.line_number:10d}  " + self.lastline)
+
         return self.lastline
 
 

@@ -6,13 +6,10 @@ from sqlite3 import DataError
 import numpy as np
 from struct import unpack
 
-from .rawlogging import AddLocationFilter, HexDump
 from .base import BaseParser, BaseHeader
 from .bitstruct import BitStruct
 
 logger = logging.getLogger(__name__)
-logflt = AddLocationFilter()
-logger.addFilter(logflt)
 
 
 class DataHeader:
