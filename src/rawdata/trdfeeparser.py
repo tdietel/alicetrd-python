@@ -434,6 +434,9 @@ class TrdFeeParser:
 	def next_event(self):
 		self.ctx.event += 1
 
+	def reset(self):
+		self.readlist = self.readlist_start.copy()
+
 	def process(self,linkdata, linkpos=-1):
 		'''Initialize parsing context and process data from one optical link.
 
@@ -441,7 +444,7 @@ class TrdFeeParser:
         '''
 
 		self.ctx.current_linkpos = linkpos
-		self.readlist = self.readlist_start.copy()
+		self.reset()
 		# logger.info(f"start processing {len(linkdata)} words of link data")
 
 		for dword in linkdata:
@@ -469,7 +472,8 @@ class TrdFeeParser:
 					break
 
 				else:
-					logger.error(f"NO MATCH - expected {expected}")
+					logger.error(f"NO MATCH - expected {expected}",
+					             extra=dict(hexdata=dword, hexaddr=self.ctx.current_linkpos))
 					# logger.error(logflt.where + f"NO MATCH - expected {expected}")
 					# check_dword(dword)
 
@@ -488,9 +492,6 @@ class TrdFeeParser:
 
 		if self.readlist is None:
 			self.reset()
-			# self.readlist = [ list([parse_tracklet, parse_eot]) ]
-
-		# logger.info(f"{self.readlist}")
 
 		maxpos = stream.tell() + size
 		while stream.tell() < maxpos:
@@ -499,7 +500,7 @@ class TrdFeeParser:
 			dword = unpack("<L", stream.read(4))[0]
 			self.ctx.current_dword = dword
 
-			logflt.where = f"{self.ctx.current_linkpos:06x} {dword:08x}  "
+			# logflt.where = f"{self.ctx.current_linkpos:06x} {dword:08x}  "
 
 			# Debugging:
 			# self.dump_readlist()
@@ -604,10 +605,13 @@ class TrdHalfCruHeader(BaseHeader):
 			return f"Error 0x{self.errflags[linkno]:02x} = {self.errflags[linkno]:3d}"
 
 class TrdCruParser(BaseParser):
-	def __init__(self):
+	def __init__(self, trdfeeparser=None):
 
 		# self.feeparser = DumpParser(logging.getLogger("raw.trd.fee"))
-		self.feeparser = TrdFeeParser() #(logging.getLogger("raw.trd.fee"))
+		if trdfeeparser is None:
+			self.feeparser = TrdFeeParser() 
+		else:
+			self.feeparser = trdfeeparser
 
 		# We might have to resume reading data from the previous RDH page.
 		# All necessary data to resume at the correct position is therefore
@@ -691,3 +695,14 @@ def check_dword(dword):
 		except AssertionError:
 			continue
 
+
+def make_trd_parser(has_cruheader, **kwargs):
+    if has_cruheader:
+        trdfeeparser = TrdFeeParser(**kwargs)
+        payloadparser = TrdCruParser(trdfeeparser)
+        # payloadparser.hexdump = hdump
+        rdhparser = RdhStreamParser(payloadparser)
+        # rdhparser.hexdump = hdump
+        return rdhparser
+    else:
+	    return TrdFeeParser(**kwargs)

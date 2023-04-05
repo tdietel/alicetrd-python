@@ -7,6 +7,8 @@ from typing import NamedTuple
 import logging
 #from collections.abc import Iterable
 
+from .trdfeeparser import make_trd_parser
+
 logger = logging.getLogger("rawlog.o32")
 
 class event_t(NamedTuple):
@@ -45,6 +47,7 @@ class o32reader:
         self.filename = file_name
         self.line_number=0
         self.linebuf = None
+        self.parsers = dict()
 
     def __iter__(self):
 
@@ -85,10 +88,13 @@ class o32reader:
                 continue
 
             for subevent in event.subevents:
-                self.trd_fee_parser.process(subevent.payload)
+                if subevent.equipment_type in self.parsers:
+                    self.parsers[subevent.equipment_type].process(subevent.payload)
 
-    def set_trd_fee_parser(self, p):
-        self.trd_fee_parser = p
+    def add_trd_parser(self, **kwargs):
+        if 'tracklet_format' not in kwargs:
+            kwargs['tracklet_format'] = 'run2'
+        self.parsers[0x10] = make_trd_parser(has_cruheader=False, **kwargs)
 
 
     def read_event_header(self):

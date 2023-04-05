@@ -5,9 +5,10 @@ import logging
 
 from .header import TrdboxHeader
 # from .trdfeeparser import TrdFeeParser, logflt
+from .factory import make_reader
 from .rawlogging import ColorFormatter
-from .o32reader import o32reader
-from .zmqreader import zmqreader
+# from .o32reader import o32reader
+# from .zmqreader import zmqreader
 
 class digits_csv_file:
 
@@ -40,26 +41,23 @@ def rec_digits(source, loglevel, skip_events):
     logging.basicConfig(level=loglevel, handlers=[ch])
 
     # Run silently
-    logflt.set_verbosity(0)
-
+    # logflt.set_verbosity(0)
+    logging.getLogger("rawlog").setLevel(logging.WARNING)
 
     # Instantiate the reader that will get events and subevents from the source
-    if source.endswith(".o32") or source.endswith(".o32.bz2"):
-        reader = o32reader(source)
-    elif source.startswith('tcp://'):
-        reader = zmqreader(source)
-    else:
-        raise ValueError(f"unknown source type: {source}")
+    reader = make_reader(source)
+    reader.add_trd_parser(store_digits=digits_csv_file("digits.csv"))
+    reader.process(skip_events=skip_events)
 
-    # The actual parsing of TRD subevents is handled by the LinkParser
-    lp = LinkParser(store_digits=digits_csv_file("digits.csv"))
+    # # The actual parsing of TRD subevents is handled by the LinkParser
+    # lp = LinkParser(store_digits=digits_csv_file("digits.csv"))
 
-    # Loop through events and subevents
-    for evno,event in enumerate(reader):
-        lp.next_event()
+    # # Loop through events and subevents
+    # for evno,event in enumerate(reader):
+    #     lp.next_event()
 
-        if evno<skip_events:
-            continue
+    #     if evno<skip_events:
+    #         continue
 
-        for subevent in event.subevents:
-            lp.process(subevent.payload)
+    #     for subevent in event.subevents:
+    #         lp.process(subevent.payload)

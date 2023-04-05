@@ -8,6 +8,7 @@ from struct import unpack
 
 from .base import BaseParser, BaseHeader
 from .bitstruct import BitStruct
+# from .trdfeeparser import make_trd_parser
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +125,10 @@ class TimeFrameReader:
         # self.log_header = lambda x: x.hexdump()
         self._skipped_stf = dict()
 
+    def add_trd_parser(self, **kwargs):
+        # self.parsers['TRD'] = make_trd_parser(has_cruheader=False, **kwargs)  
+        pass
+    
     def process(self, skip_events=0):
         while self.file.readable():
             addr = self.file.tell()

@@ -7,6 +7,7 @@ import time
 from .rawlogging import AddLocationFilter, HexDump
 from .base import BaseHeader
 from .bitstruct import BitStruct
+from .trdfeeparser import make_trd_parser
 
 logger = logging.getLogger(__name__)
 logflt = AddLocationFilter()
@@ -51,6 +52,9 @@ class MiniDaqReader:
         self.parsers = dict()
         self.hexdump = lambda x: None # Default: no logging
         self.event = 0
+
+    def add_trd_parser(self, **kwargs):
+        self.parsers[0x10] = make_trd_parser(has_cruheader=False, **kwargs)
 
     def process(self, skip_events=0):
         """Read entire file."""
