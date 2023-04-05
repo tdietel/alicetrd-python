@@ -38,25 +38,14 @@ class ColorFormatter(logging.Formatter):
         super().__init__(default_format)
 
         if default_format is None:
-            default_format = "%(color)s%(message)s"
+            default_format = "%(color)s%(message)s"+self.reset
         if hexdump_format is None:
-            hexdump_format = "%(hexaddr)012x  %(hexdata)08x    %(color)s%(shortname)-4s %(message)-45s"
+            hexdump_format = "%(hexaddr)012x  %(hexdata)08x    %(color)s%(shortname)-4s %(message)-45s"+self.reset
 
-        # "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
-        # self.fmt = fmt
-        # self.FORMATS = {
-        #     logging.DEBUG: self.grey + self.fmt + self.reset,
-        #     logging.INFO: self.reset + self.fmt + self.reset,
-        #     logging.WARNING: self.yellow + self.fmt + self.reset,
-        #     logging.ERROR: self.red + self.fmt + self.reset,
-        #     logging.CRITICAL: self.bold_red + self.fmt + self.reset,
-        #     # 21: self.blue + self.fmt + self.reset
-        # }
         self.formatter_hexdump = logging.Formatter(hexdump_format)
         self.formatter_default = logging.Formatter(default_format)
 
     def format(self, record):            
-        # log_fmt = self.FORMATS.get(record.levelno)
         record.shortname = record.name.split(".")[-1]
         if not hasattr(record, 'color'):
             record.color = ""
@@ -66,11 +55,6 @@ class ColorFormatter(logging.Formatter):
         else:
             return self.formatter_default.format(record)
         
-        #     log_fmt = "%(where)-20s  " + log_fmt
-        # formatter = logging.Formatter(log_fmt)
-        # return formatter.format(record)
-
-    # ch.setLevel(logging.DEBUG)
 
 class TermColorFilter(logging.Filter):
 
@@ -244,12 +228,3 @@ class HexDump:
             self.dump(args[0]._data, args[0]._addr, desc, fmt)
         else:
             self.dump_dword(*args)
-
-
-    # def colorize(fmts, first='\033[1;37;40m ', body='\033[0;37;100m '):
-    #     if len(fmts) >= 1:
-    #         fmts[0] = first + fmts[0]
-    #     for i,f in enumerate(fmts[1:]):
-    #         fmts[i+1] = body + f
-    #     return fmts
-
