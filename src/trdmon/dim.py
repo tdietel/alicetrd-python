@@ -4,16 +4,24 @@ import pydim
 import logging
 import trdmon.dimwid as dimwid
 
-# class servers(urwid.Pile):
-class servers(urwid.Columns):
+class servers(urwid.Pile):
     def __init__(self, servers):
 
-        # Create a dictionary with all servers that we want to monitor
+        # self.servers = OrderedDict(
+        #   ztt_dimfed_server = dict(display='ICL'),
+        #   # trdbox =  dict(display='TRDbox'),
+        #   ArdPower =  dict(display='Power'),
+        #   HV =  dict(display='HV'),
+        # )
+
         self.servers = dict()
-        for svcname,disp in servers.items():
-            self.servers[svcname] = dict(
-                display=disp, up=False, widget=urwid.Text(disp)
-            )
+        for dimname,disp in servers.items():
+            self.servers[dimname] = dict(display=disp)
+
+        # create a widget for each DIM server
+        for s in self.servers.values():
+            s['up'] = False
+            s['widget'] = urwid.Text(s['display'])
 
         # call the constructor of urwid.Pile
         super().__init__([ s['widget'] for s in self.servers.values() ])

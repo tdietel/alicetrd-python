@@ -41,8 +41,6 @@ class MiniDaqHeader(BaseHeader):
 
     _hexdump_fmt = ('\033[1;37;40m', '\033[0;37;100m')
 
-
-
 class MiniDaqReader:
     """Reader class for MiniDAQ files 
 
@@ -52,20 +50,31 @@ class MiniDaqReader:
         self.file = open(filename,"rb")
         self.parsers = dict()
         self.hexdump = lambda x: None # Default: no logging
+        self.event = 0
 
     def process(self, skip_events=0):
+        """Read entire file."""
         while self.file.readable():
-            addr = self.file.tell()
-            data = self.file.read(20)
-            if len(data)==0:
-                break
-            hdr = MiniDaqHeader(data, addr)
-            self.hexdump(hdr)
+            self.read(20)
 
-            if hdr.equipment_type in self.parsers:
-                self.parsers[hdr.equipment_type].read(self.file, hdr.datasize)
-            else:
-                self.file.seek(hdr.payload_size, 1)  # skip over payload
+    def read(self, size):
+        addr = self.file.tell()
+        data = self.file.read(20)
+        if len(data)==0:
+            return
+
+        hdr = MiniDaqHeader(data, addr)
+        self.hexdump(hdr)
+
+        if hdr.equipment_type == 1:
+            # eq. type 1 is a MiniDaq event, which contains subevents 
+            self.read(hdr.datasize)
+        elif hdr.equipment_type in self.parsers:
+            self.parsers[hdr.equipment_type].reset()
+            self.parsers[hdr.equipment_type].read(self.file, hdr.datasize)
+            
+        else:
+            self.file.seek(hdr.datasize, 1)  # skip over payload
 
 
 
