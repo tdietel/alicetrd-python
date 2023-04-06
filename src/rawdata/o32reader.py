@@ -1,11 +1,11 @@
 
-import numpy
+import io
+import struct
 import re
 import subprocess
 from datetime import datetime
 from typing import NamedTuple
 import logging
-#from collections.abc import Iterable
 
 from .trdfeeparser import make_trd_parser
 
@@ -19,8 +19,10 @@ class subevent_t(NamedTuple):
     # timestamp: datetime
     equipment_type: int
     equipment_id: int
-    #payload: Iterable[int]
-    payload: numpy.ndarray
+    # payload: Iterable[int]
+    # payload: numpy.ndarray
+    payload: io.BytesIO
+    size: int
 
 
 class o32reader:
@@ -49,12 +51,6 @@ class o32reader:
         self.linebuf = None
         self.parsers = dict()
 
-    def __iter__(self):
-
-        # I don't remember why I'm opening the file in the iterator and not in
-        # the constructor. Maybe to ensure that you can read the file several
-        # times with the same o32reader, although I'm not sure this is needed.
-
         if self.filename.endswith('.o32'):
             self.infile=open(self.filename, 'r')
 
@@ -66,35 +62,32 @@ class o32reader:
         else:
             raise ValueError(f"invalid file extension of input file {self.filename}")
 
-        return self
-
-    #Create dictionary
-    def __next__(self):
-
-        header = self.read_event_header()
-
-        subevents = tuple([self.read_subevent() for i in range(header['data blocks'])])
-
-        return event_t(header['time stamp'], subevents)
+    def add_trd_parser(self, **kwargs):
+        if 'tracklet_format' not in kwargs:
+            kwargs['tracklet_format'] = 'run2'
+        self.parsers[0x10] = make_trd_parser(has_cruheader=False, **kwargs)
 
     def process(self, skip_events=0):
         """This method will handle the reading process.
         
         It is meant as a replacement for the lecacy iterator interface."""
 
-        # Loop through events and subevents
-        for evno, event in enumerate(self):
-            if evno < skip_events:
-                continue
+        evno = -1
+        while True:
+            evno += 1
+            header = self.read_event_header()
 
-            for subevent in event.subevents:
+            for i in range(header['data blocks']):
+                subevent = self.read_subevent()
+
+                if evno < skip_events:
+                    continue
+
                 if subevent.equipment_type in self.parsers:
-                    self.parsers[subevent.equipment_type].process(subevent.payload)
+                    self.parsers[subevent.equipment_type].parse(
+                        subevent.payload, subevent.size)
 
-    def add_trd_parser(self, **kwargs):
-        if 'tracklet_format' not in kwargs:
-            kwargs['tracklet_format'] = 'run2'
-        self.parsers[0x10] = make_trd_parser(has_cruheader=False, **kwargs)
+            logger.warning(f"Processed {evno+1} events")
 
 
     def read_event_header(self):
@@ -151,11 +144,17 @@ class o32reader:
         m = re.search('## *size: *(.*)', self.read_line())
         payload_size = int(m.group(1))
 
-        payload = numpy.zeros(payload_size, dtype=numpy.uint32)
+        payload = bytes()
         for i in range(payload_size):
-            payload[i] = numpy.uint32(int(self.read_line(logger=None),0))
-
-        return subevent_t(equipment_type, equipment_id, payload)
+             dword = int(self.infile.readline().decode(), 0)
+             payload += struct.pack("<I",dword)
+        self.line_number += payload_size
+        
+        if 4*payload_size != len(payload):
+            logger.critical(
+                f"payload sizes do not match {4*payload_size} != {len(payload)}")
+            
+        return subevent_t(equipment_type, equipment_id, io.BytesIO(payload), len(payload))
 
 
 

@@ -1,7 +1,7 @@
 
 import numpy # probably overkill - replace with struct.unpack?
 import logging
-from struct import unpack
+import struct
 
 class BaseParser:
     """Parser base class
@@ -50,6 +50,7 @@ class DumpParser(BaseParser):
 class BaseHeader:
     header_size = 0
     _hexdump_fmt = ('\033[1;37;40m', '\033[0;37;100m')
+    _hexdump_desc = ("")
 
     def __init__(self, data, addr):
         if not isinstance(data, bytes) or len(data) != self.header_size:
@@ -71,6 +72,25 @@ class BaseHeader:
         header = cls(data, addr)
         # header.hexdump()
         return header
+
+    def hexdump(self, logger):
+        for i, words in enumerate(struct.iter_unpack("<L", self._data)):
+
+            if len(self._hexdump_desc) == 1:
+                desc = self._hexdump_desc
+            else:
+                desc = self._hexdump_desc[i]
+
+            if len(self._hexdump_fmt) == 1:
+                fmt = self._hexdump_fmt[0]
+            elif len(self._hexdump_fmt) == 2:
+                fmt = self._hexdump_fmt[0] if i==0 else (self._hexdump_fmt[1])
+            else:
+                fmt = self._hexdump_fmt[i]
+
+            # self.dump_dword(addr+4*i, words[0], txt)
+            logger.info(fmt+desc, extra=dict(hexaddr=self._addr+4*i, hexdata=words[0]))
+
 
     def unpack(self, data):
         pass

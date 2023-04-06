@@ -27,10 +27,10 @@ def evdump(source, loglevel, suppress, quiet, skip_events, tracklet_format):
     logging.basicConfig(level=loglevel, handlers=[lh])
 
     # # This is how parts of the hexdump can be deactivated
-    # logging.getLogger("rawlog").setLevel(logging.WARNING)
-    # logging.getLogger("rawlog.mcm").setLevel(logging.WARNING)
-    # logging.getLogger("rawlog.mcm.ADC").setLevel(logging.WARNING)
-    # logging.getLogger("rawlog.mcm.EOD").setLevel(logging.INFO)
+    # logging.getLogger("rawlog.hexdump.").setLevel(logging.WARNING)
+    # logging.getLogger("rawlog.hexdump.mcm").setLevel(logging.WARNING)
+    # logging.getLogger("rawlog.hexdump..mcm.ADC").setLevel(logging.WARNING)
+    # logging.getLogger("rawlog.hexdump..mcm.EOD").setLevel(logging.INFO)
 
 
     # We leave the rest to the reader

@@ -34,7 +34,8 @@ class digits_csv_file:
 @click.argument('source', default='tcp://localhost:7776')
 @click.option('-o', '--loglevel', default=logging.INFO)
 @click.option('-k', '--skip-events', default=0)
-def rec_digits(source, loglevel, skip_events):
+@click.option('-t', '--tracklet-format', default="auto")
+def rec_digits(source, loglevel, skip_events, tracklet_format):
 
     ch = logging.StreamHandler()
     ch.setFormatter(ColorFormatter())
@@ -46,7 +47,7 @@ def rec_digits(source, loglevel, skip_events):
 
     # Instantiate the reader that will get events and subevents from the source
     reader = make_reader(source)
-    reader.add_trd_parser(store_digits=digits_csv_file("digits.csv"))
+    reader.add_trd_parser(store_digits=digits_csv_file("digits.csv"), tracklet_format=tracklet_format)
     reader.process(skip_events=skip_events)
 
     # # The actual parsing of TRD subevents is handled by the LinkParser

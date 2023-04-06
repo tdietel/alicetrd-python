@@ -14,7 +14,7 @@ from .base import BaseHeader, BaseParser, DumpParser
 from .bitstruct import BitStruct
 
 # logger = logging.getLogger(__name__)
-logger = logging.getLogger("rawlog")
+logger = logging.getLogger("rawlog.hexdump")
 
 logger.getChild("trkl.TKH").addFilter(TermColorFilter("bold_green"))
 logger.getChild("trkl.TKD").addFilter(TermColorFilter("green"))
@@ -30,12 +30,6 @@ logger.getChild("mcm.MCM").addFilter(TermColorFilter("bold_blue"))
 logger.getChild("mcm.MSK").addFilter(TermColorFilter("blue"))
 logger.getChild("mcm.ADC").addFilter(TermColorFilter("grey"))
 logger.getChild("mcm.EOD").addFilter(TermColorFilter("bold_blue"))
-
-
-# logflt = AddLocationFilter()
-# logger.addFilter(logflt)
-# logger.getChild("marker.EOT").addFilter(logflt)
-# hexdump = HexDump()
 
 
 class decode:
@@ -394,7 +388,7 @@ class parse_adcdata:
 		msg += f"tb {self.timebin:2} (f={f})   {x:4}  {y:4}  {z:4}"
 
 		logger.getChild("mcm.ADC").info(msg,
-                                  extra=dict(hexdata=dword, hexaddr=ctx.current_linkpos))
+                                 extra=dict(hexdata=dword, hexaddr=ctx.current_linkpos))
 
 		# assert( f == 2 if self.channel%2 else 3)
 
@@ -434,64 +428,15 @@ class TrdFeeParser:
 	def next_event(self):
 		self.ctx.event += 1
 
-	def reset(self):
-		self.readlist = self.readlist_start.copy()
-
-	def process(self,linkdata, linkpos=-1):
-		'''Initialize parsing context and process data from one optical link.
-
-		Parameter: linkdata = iterable list of uint32 data words
-        '''
-
-		self.ctx.current_linkpos = linkpos
-		self.reset()
-		# logger.info(f"start processing {len(linkdata)} words of link data")
-
-		for dword in linkdata:
-			self.ctx.current_linkpos += 1
-			self.ctx.current_dword = dword
-
-			try:
-				# for fct in self.readlist[i]:
-				expected = self.readlist.pop(0)
-				for fct in expected:
-					# The function can raise an AssertionError to signal that
-					# it does not understand the dword
-					try:
-						result = fct(self.ctx,dword)
-
-					except AssertionError:
-						continue
-
-					if not isinstance(result, dict):
-						break
-
-					if 'readlist' in result:
-						self.readlist.extend(result['readlist'])
-
-					break
-
-				else:
-					logger.error(f"NO MATCH - expected {expected}",
-					             extra=dict(hexdata=dword, hexaddr=self.ctx.current_linkpos))
-					# logger.error(logflt.where + f"NO MATCH - expected {expected}")
-					# check_dword(dword)
-
-					# skip everything until EOD
-					self.readlist.extend([[parse_eod, skip_until_eod]])
-					continue
-
-
-			except IndexError:
-				logger.error("extra data after end of readlist")
-				break
-
-	def read(self, stream, size):
+	def parse(self, stream, size):
 
 		self.ctx.current_linkpos = -1
 
-		if self.readlist is None:
-			self.reset()
+		# if self.readlist is None:
+		# 	self.reset()
+
+		# Initialize the readlist
+		self.readlist = self.readlist_start.copy()
 
 		maxpos = stream.tell() + size
 		while stream.tell() < maxpos:
@@ -500,14 +445,8 @@ class TrdFeeParser:
 			dword = unpack("<L", stream.read(4))[0]
 			self.ctx.current_dword = dword
 
-			# logflt.where = f"{self.ctx.current_linkpos:06x} {dword:08x}  "
-
-			# Debugging:
-			# self.dump_readlist()
-
 			try:
 				expected = self.readlist.pop(0)
-				# for fct in self.readlist[i]:
 				for fct in expected:
 
 					# The function can raise an AssertionError to signal that
@@ -527,8 +466,7 @@ class TrdFeeParser:
 					break
 
 				else:
-					logger.error(logflt.where
-						+ f"NO MATCH - expected {[x.__name__ for x in expected]} found {dword:X}")
+					logger.error(f"NO MATCH - expected {[x.__name__ for x in expected]} found {dword:08x}")
 					# check_dword(dword)
 
 					# skip everything until EOD

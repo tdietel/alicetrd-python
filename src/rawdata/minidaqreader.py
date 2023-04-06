@@ -8,6 +8,7 @@ from .rawlogging import AddLocationFilter, HexDump
 from .base import BaseHeader
 from .bitstruct import BitStruct
 from .trdfeeparser import make_trd_parser
+import struct
 
 logger = logging.getLogger(__name__)
 logflt = AddLocationFilter()
@@ -35,12 +36,18 @@ class MiniDaqHeader(BaseHeader):
 
     # hexdump formatting info
 
-    _hexdump_desc = [ "MiniDAQ magic word 0x{magic:08x}", 
-        "equipment {equipment_type:02X}:{equipment_id:02X} header version v{version}",
-        "hdr:{hdrsize} bytes  payload: {datasize}=0x{datasize:04X} bytes",
-        "{time}", "" ]
+    def hexdump(self):
+        hexlogger = logger.getChild(f"hexdump.minidaq")
 
-    _hexdump_fmt = ('\033[1;37;40m', '\033[0;37;100m')
+        txt = list((
+            f"MiniDAQ magic word 0x{self.magic:08x}",
+            f"equipment {self.equipment_type:02X}:{self.equipment_id:02X} header version v{self.version}",
+            f"hdr:{self.hdrsize} bytes  payload: {self.datasize}=0x{self.datasize:04X} bytes",
+            f"{self.time}", ""))
+
+        for i, words in enumerate(struct.iter_unpack("<I", self._data)):
+            extra = dict(hexaddr=self._addr+4*i, hexdata=words[0])
+            hexlogger.getChild(f"MQ{i}").info(txt, extra=extra)
 
 class MiniDaqReader:
     """Reader class for MiniDAQ files 
@@ -49,6 +56,12 @@ class MiniDaqReader:
 
     def __init__(self, filename):
         self.file = open(filename,"rb")
+        
+        # find filesize
+        self.file.seek(0,2)
+        self.filesize =self.file.tell()
+        self.file.seek(0)
+
         self.parsers = dict()
         self.hexdump = lambda x: None # Default: no logging
         self.event = 0
@@ -58,28 +71,31 @@ class MiniDaqReader:
 
     def process(self, skip_events=0):
         """Read entire file."""
-        while self.file.readable():
-            self.read(20)
+        while self.file.tell() < self.filesize:
+            self.read()
 
-    def read(self, size):
+    def read(self):
         addr = self.file.tell()
         data = self.file.read(20)
-        if len(data)==0:
+        if len(data)!=20:
+            logger.info(f"read {len(data)} bytes at offset {addr}")
             return
 
         hdr = MiniDaqHeader(data, addr)
-        self.hexdump(hdr)
+        # self.hexdump(hdr)
+        hdr.hexdump()
 
         if hdr.equipment_type == 1:
             # eq. type 1 is a MiniDaq event, which contains subevents 
-            self.read(hdr.datasize)
+            self.read()
         elif hdr.equipment_type in self.parsers:
-            self.parsers[hdr.equipment_type].reset()
-            self.parsers[hdr.equipment_type].read(self.file, hdr.datasize)
-            
+            # self.parsers[hdr.equipment_type].reset()
+            self.parsers[hdr.equipment_type].parse(self.file, hdr.datasize)
         else:
             self.file.seek(hdr.datasize, 1)  # skip over payload
 
+        self.event += 1
+        logger.warning(f"Processed {self.event} events")
 
 
 
